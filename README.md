@@ -10,7 +10,40 @@ This repository is home to the jupyter notebooks and python scripts that recreat
 
 ## How to use
 
-Every script in the manuscript is designed to be run using the supplementary spreadsheet associated with the manuscript.
+Every script in the manuscript is designed to be run using the supplementary spreadsheet associated with the manuscript. Running the scripts can be done using whatever python IDE you choose, however, the user should be somewhat familiar with their terminal/command prompt (or at least how to open and type in it), as the code will prompt the user to enter the filepaths for:
+
+1. where to export the figures/spreadsheets/outputs of the code (this is a folder directory)
+   1. ex: `"C:\Users\username\...\Gcubed_ML_Manuscript\code_outputs"`
+2. the path to the data to be used. This is usually one of two things:
+   1. The supplementary spreadsheet itself, ex: `"C:\Users\username\...\Gcubed_ML_Manuscript\supplementary_spreadsheet.xlsx"`
+   2. A product derived from previous code, in which case a path to a directory of code outputs is suggested, ex: `"C:\Users\username\...\Gcubed_ML_Manuscript\code_outputs"`
+
+### Code virtual environment
+
+We have created a virtual environment contained within `lubbers23gcubed.yml`. To create a virtual environment using this file, please see the Anaconda [documentation](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file). In brief, from your base environment:
+
+```
+conda env create -f lubbers23gcubed.yml
+```
+
+To double check that it was created:
+
+```
+conda info --envs
+```
+
+And the virtual environment should be in the displayed list. To activate it:
+
+```
+conda activate lubbers23gcubed
+```
+
+Now to run the scripts from the terminal window, simply navigate to the directory where they are saved on your local machine (example using the first script):
+
+```
+cd path\to\downloaded_scripts
+python 1_build_training_data.py
+```
 
 ## Explanation of code notebooks
 
