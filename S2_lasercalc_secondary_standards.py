@@ -7,38 +7,49 @@ For the math here see the following
 [document](https://github.com/jlubbersgeo/laserTRAM-DB/blob/main/docs/LaserTRAM_DB_documentation.pdf)
 """
 
+import glob as glob
+import os
 import re
 
 # matplotlib defaults
 import sys
 
 import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.offsetbox import AnchoredText
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import statsmodels.api as sm
-# from matplotlib.lines import Line2D
-from scipy import stats
-from statsmodels.tools.eval_measures import rmse
-import glob as glob
-from tqdm import tqdm
-import os
-
-import mpl_defaults
-
+from matplotlib.offsetbox import AnchoredText
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from rich.console import Console
 from rich.progress import track
 from rich.prompt import Prompt
 from rich.table import Table
 from rich.theme import Theme
 
-outpath = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs"
+# from matplotlib.lines import Line2D
+from scipy import stats
+from statsmodels.tools.eval_measures import rmse
+from tqdm import tqdm
+
+import mpl_defaults
+
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
+)
+console = Console(theme=custom_theme)
+
+export_path = Prompt.ask("[bold gold1] Enter the path to where spreadsheets should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
 
 #path to raw laser data csv files
-folder_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Data\laser_data\B4 Caldera Project\LT_complete\proximal"
+folder_path = Prompt.ask("[bold gold1] Enter the path to the folder where the normalized laser data lives[bold gold1]")
+folder_path = folder_path.replace('"',"")
+
+stds_path = Prompt.ask("[bold gold1] Enter the path to the laicpms_stds_tidy.xlsx[bold gold1]")
+stds_path = stds_path.replace('"',"")
 infiles = glob.glob('{}/*.xlsx'.format(folder_path))
+
 
 for calib_std in ["GSE-1G","GSD-1G"]:
     
@@ -50,7 +61,7 @@ for calib_std in ["GSE-1G","GSD-1G"]:
 
         # import published standards data
         stds_data = pd.read_excel(
-            r"C:\Users\jlubbers\OneDrive - DOI\Research\Coding\laserTRAM-DB\tests\laicpms_stds_tidy.xlsx"
+            f"{stds_path}"
         ).set_index("Standard")
 
 
@@ -428,13 +439,13 @@ for calib_std in ["GSE-1G","GSD-1G"]:
     all_standards_comps = pd.concat(file_df_list,axis = 'rows').reset_index().sort_values(by = 'timestamp')
 
 
-    with pd.ExcelWriter(r"{}\AK_tephra_laser_std_comps_{}.xlsx".format(outpath,calib_std)) as writer:
+    with pd.ExcelWriter(r"{}\AK_tephra_laser_std_comps_{}.xlsx".format(export_path,calib_std)) as writer:
         all_standards_comps.to_excel(writer, sheet_name="Sheet1",index = False)
 
-    print(f"Congrats your standards are processed and saved here:\n {outpath}")
+    print(f"Congrats your standards are processed and saved here:\n {export_path}")
 
-gse_data = pd.read_excel(f"{outpath}\AK_tephra_laser_std_comps_GSE-1G.xlsx").set_index('sample')
-gsd_data = pd.read_excel(f"{outpath}\AK_tephra_laser_std_comps_GSD-1G.xlsx").set_index('sample')
+gse_data = pd.read_excel(f"{export_path}\AK_tephra_laser_std_comps_GSE-1G.xlsx").set_index('sample')
+gsd_data = pd.read_excel(f"{export_path}\AK_tephra_laser_std_comps_GSD-1G.xlsx").set_index('sample')
 
 ##############################################################
 ################### MANUSCRIPT FIGURE S2 #####################
@@ -513,7 +524,7 @@ for standard, a in zip(secondary_standards,axes):
     a.minorticks_off()
 # plt.legend([],[], frameon=False)
 # fig.tight_layout()
-plt.savefig("{}\{}_accuracy_{}primary.pdf".format(outpath,secondary_standards[0],calib_std),bbox_inches = 'tight')
+plt.savefig("{}\{}_accuracy_{}primary.pdf".format(export_path,secondary_standards[0],calib_std),bbox_inches = 'tight')
 
 ################################################################
 ########## accuracy and precision values table #################
@@ -573,7 +584,7 @@ vals_df = pd.DataFrame(np.array(vals).reshape(mean_df.shape))
 vals_df.index = secondary_standards
 vals_df.columns = myanalytes
 vals_df = vals_df.T
-vals_df.to_excel('{}\B4_proximal_lasersecondarystds_accuracy.xlsx'.format(outpath))
+vals_df.to_excel('{}\B4_proximal_lasersecondarystds_accuracy.xlsx'.format(export_path))
 
 vals_df.index.name = 'Analyte'
 console = Console()

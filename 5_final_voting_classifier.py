@@ -32,45 +32,54 @@ a range of scenarios, takes about 25 minutes to run.
 
 
 
+from warnings import simplefilter
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 
-
-from warnings import simplefilter
 simplefilter(action='ignore', category=FutureWarning)
-from sklearn.ensemble import VotingClassifier
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import (
-    cross_validate,
-    train_test_split,
-)
-from sklearn.model_selection import RepeatedStratifiedKFold, StratifiedKFold, cross_val_score
-from sklearn.metrics import  confusion_matrix
-from sklearn.metrics import classification_report, make_scorer, precision_score, recall_score, f1_score, accuracy_score
-from sklearn.model_selection import StratifiedKFold
-
-import time
-import sys
 import pickle
-from tqdm import tqdm
-
-# custom plotting defaults
-import mpl_defaults
 
 # where all the figures get dumped
 import time
 
-export_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs"
-tstart = time.time()
-dark_mode = False
+from rich.console import Console
+from rich.progress import track
+from rich.prompt import Prompt
+from rich.table import Table
+from rich.theme import Theme
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.ensemble import (
+    GradientBoostingClassifier,
+    RandomForestClassifier,
+    VotingClassifier,
+)
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    make_scorer,
+    precision_score,
+    recall_score,
+)
+from sklearn.model_selection import (
+    RepeatedStratifiedKFold,
+    StratifiedKFold,
+    cross_val_score,
+    cross_validate,
+    train_test_split,
+)
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from tqdm import tqdm
+
+# custom plotting defaults
+import mpl_defaults
 
 
 # from https://github.com/amueller/introduction_to_ml_with_python/blob/master/mglearn/tools.py
@@ -140,9 +149,26 @@ def delta_confusion_matrix(
 #########################################################################
 ######################### IMPORT DATA ###################################
 #########################################################################
-data = pd.read_excel(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\B4_training_data_transformed_v2.xlsx"
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
 )
+console = Console(theme=custom_theme)
+
+export_path = Prompt.ask("[bold gold1] Enter the path to where figures should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
+
+data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
+data_path = data_path.replace('"',"") 
+
+data = pd.read_excel(
+    f"{data_path}\\\B4_training_data_transformed_v2.xlsx")
+
+
+major_elements = data.loc[:, "Si_ppm":"P_ppm"].columns.tolist()
+trace_elements = data.loc[:, "Ca":"U"].columns.tolist()
+ratios = data.loc[:, "Sr/Y":"Rb/Cs"].columns.tolist()
+
+tstart = time.time()
 major_elements = data.loc[:, "Si_ppm":"P_ppm"].columns.tolist()
 trace_elements = data.loc[:, "Ca":"U"].columns.tolist()
 ratios = data.loc[:, "Sr/Y":"Rb/Cs"].columns.tolist()
@@ -195,10 +221,10 @@ estimators = [
 
 
 # FIND THE WEIGHTS OF EACH ALGORITHM TO BE USED IN THE SOFT VOTING SCHEME
-print("\n FINDING RFE FEATURE WEIGHTS \n")
+console.print("\n FINDING RFE FEATURE WEIGHTS \n",style = "main")
 skf = RepeatedStratifiedKFold(n_splits=5, n_repeats=10)
 metrics = []
-for estimator in tqdm(estimators):
+for estimator in track(estimators, description="determining algorithm weights"):
     clf = estimator[1]
     scoring = {
         "accuracy": make_scorer(accuracy_score),
@@ -230,7 +256,7 @@ vcs_trace_tuned = VotingClassifier(
 )
 
 t0 = time.time()
-print("Working on the soft voting classifier...stay tuned!\n")
+console.print("Working on the soft voting classifier...stay tuned!\n",style = "main")
 cv = RepeatedStratifiedKFold(n_splits=6, n_repeats=5, random_state=rs)
 vcs_trace_tuned_scores = cross_validate(
     vcs_trace_tuned, X_train, y_train, cv=cv, n_jobs=-1
@@ -238,8 +264,8 @@ vcs_trace_tuned_scores = cross_validate(
 vcs_trace_tuned_test_accuracies = vcs_trace_tuned_scores["test_score"]
 vcs_trace_tuned.fit(X_train, y_train)
 t1 = time.time()
-print(
-    f"Survey says...\nSoft voting mean test accuracy: {np.round(np.mean(vcs_trace_tuned_test_accuracies),3)} ± {np.round(np.std(vcs_trace_tuned_test_accuracies),3)}\nfit time : {np.round((t1-t0)/60,2)} min\n"
+console.print(
+    f"Survey says...\nSoft voting mean test accuracy: {np.round(np.mean(vcs_trace_tuned_test_accuracies),3)} ± {np.round(np.std(vcs_trace_tuned_test_accuracies),3)}\nfit time : {np.round((t1-t0)/60,2)} min\n",style = "result"
 )
 
 
@@ -267,29 +293,12 @@ X_train_major, X_test_major, y_train_major, y_test_major = train_test_split(
     test_size=0.3,
     random_state=rs,
 )
-estimators = [
-    ("lda", LinearDiscriminantAnalysis(shrinkage=0.3, solver="lsqr")),
-    ("logreg", LogisticRegression(C=10, penalty="l2", solver="newton-cg")),
-    ("knc", KNeighborsClassifier(algorithm="auto", n_neighbors=5)),
-    ("svc", SVC(random_state=rs, C=10, gamma=1, probability=True)),
-    (
-        "rfc",
-        RandomForestClassifier(
-            criterion="gini", max_depth=10, n_estimators=500, random_state=rs
-        ),
-    ),
-    (
-        "gbc",
-        GradientBoostingClassifier(
-            learning_rate=0.1, max_depth=2, n_estimators=250, random_state=rs
-        ),
-    ),
-]
+
 
 skf = RepeatedStratifiedKFold(n_splits=5, n_repeats=10)
 metrics = []
-print("\n FINDING MAJOR ELEMENT WEIGHTS \n")
-for estimator in tqdm(estimators):
+console.print("\n FINDING MAJOR ELEMENT WEIGHTS \n",style = "main")
+for estimator in track(estimators, description="determining algorithm weights"):
 
     clf = estimator[1]
 
@@ -321,7 +330,7 @@ vcs_major_tuned = VotingClassifier(
 
 
 t0 = time.time()
-print("Working on the soft voting classifier...stay tuned!\n")
+console.print("Working on the soft voting classifier...stay tuned!\n",style = "main")
 cv = RepeatedStratifiedKFold(n_splits=6, n_repeats=5, random_state=rs)
 vcs_major_tuned_scores = cross_validate(
     vcs_major_tuned, X_train_major, y_train_major, cv=cv, n_jobs=-1
@@ -329,8 +338,8 @@ vcs_major_tuned_scores = cross_validate(
 vcs_major_tuned_test_accuracies = vcs_major_tuned_scores["test_score"]
 vcs_major_tuned.fit(X_train_major, y_train_major)
 t1 = time.time()
-print(
-    f"Survey says...\nSoft voting mean test accuracy: {np.round(np.mean(vcs_major_tuned_test_accuracies),3)} ± {np.round(np.std(vcs_major_tuned_test_accuracies),3)}\nfit time : {np.round((t1-t0)/60,2)} min\n"
+console.print(
+    f"Survey says...\nSoft voting mean test accuracy: {np.round(np.mean(vcs_major_tuned_test_accuracies),3)} ± {np.round(np.std(vcs_major_tuned_test_accuracies),3)}\nfit time : {np.round((t1-t0)/60,2)} min\n",style = "result"
 )
 
 
@@ -671,42 +680,19 @@ X_train, X_test, y_train, y_test = train_test_split(
     test_size=0.02,
     random_state=rs,
 )
-estimators = [
-    ("lda", LinearDiscriminantAnalysis(shrinkage=0.3, solver="lsqr")),
-    ("logreg", LogisticRegression(C=10, penalty="l2", solver="newton-cg")),
-    ("knc", KNeighborsClassifier(algorithm="auto", n_neighbors=5)),
-    ("svc", SVC(random_state=rs, C=10, gamma=1, probability=True)),
-    (
-        "rfc",
-        RandomForestClassifier(
-            criterion="gini", max_depth=10, n_estimators=500, random_state=rs
-        ),
-    ),
-    (
-        "gbc",
-        GradientBoostingClassifier(
-            learning_rate=0.1, max_depth=2, n_estimators=250, random_state=rs
-        ),
-    ),
-]
+
 
 skf = RepeatedStratifiedKFold(n_splits=5, n_repeats=10)
+console.print("\n WORKING ON DEPLOYMENT MODEL \n",style = "main")
+console.print("FINDING WEIGHTS \n",style = "main")
+
 metrics = []
-print("\n WORKING ON DEPLOYMENT MODEL \n")
+# FIND SCORING METRIC FOR EACH LIST OF ESTIMATORS ESTABLISHED ABOVE
+console.print(f"working on {estimators[0][0]}", style="result")
+for i in track(range(len(estimators)), description="determining model weights..."):
+    clf = estimators[i][1]
 
-print("\n FINDING WEIGHTS \n")
-
-for estimator in tqdm(estimators):
-
-    clf = estimator[1]
-
-    scoring = {
-        "accuracy": make_scorer(accuracy_score),
-        "precision": make_scorer(precision_score),
-        "recall": make_scorer(recall_score),
-        "f1_score": make_scorer(f1_score),
-    }
-
+    # TURN THE METRICS INTO A DATAFRAME
     df = pd.DataFrame.from_dict(
         cross_validate(
             estimator=clf,
@@ -716,8 +702,13 @@ for estimator in tqdm(estimators):
             scoring=["f1_weighted", "accuracy"],
         )
     )
+    # GET JUST THE ACCURACY AND F1 SCORE
     d = df.loc[:, ["test_f1_weighted", "test_accuracy"]].mean(axis="rows")
+    # ITERATIVELY ADD ACCURACY AND F1 SCORE TO LIST
     metrics.append(d)
+
+    if i + 1 < len(estimators):
+        console.print(f"\nworking on {estimators[i+1][0]} ", style="result")
 
 metrics_df = pd.DataFrame(metrics)
 metrics_df.index = [estimator[0] for estimator in estimators]
@@ -730,8 +721,27 @@ vcs_trace_tuned_deployment = VotingClassifier(
     weights=metrics_df["test_f1_weighted"],
 )
 
+console.print(
+    "\n\nESTIMATOR WEIGHTS FOUND...TRAINING VOTING CLASSIFIER!\n\n", style="main"
+)
+
+output_table = metrics_df.reset_index()
+display_table = Table(title="Algorithm performance metrics")
+for column, color in zip(
+    ["Algorithm", "F1 score", "Accuracy"], ["main", "result", "result"]
+):
+    display_table.add_column(column, style=color)
+
+rows = output_table.values.tolist()
+rows = [[str(el) for el in row] for row in rows]
+for row in rows:
+    display_table.add_row(*row)
+
+console.print(display_table)
+
 
 vcs_trace_tuned_deployment.fit(X_train, y_train)
+console.print("\n\nTRAINING COMPLETE :thumbs_up:\n\n", style="main")
 
 pickle.dump(
     vcs_trace_tuned_deployment,
@@ -742,9 +752,10 @@ pickle.dump(
 )
 metrics_df = metrics_df.reset_index()
 metrics_df.to_excel(
-    f"{export_path}\test_deployment_votingclassifier_weights.xlsx",
+    f"{export_path}\\test_deployment_votingclassifier_weights.xlsx",
     index=False,
 )
 
 tfinal = time.time()
-print(f"Script runtime is {np.round((tfinal - tstart)/60,2)} minutes")
+console.print(f"Script runtime is {np.round((tfinal - tstart)/60,2)} minutes")
+console.print(f"MODEL SAVED AT:\n{export_path}", style="path")

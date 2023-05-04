@@ -30,39 +30,39 @@ For each unique eruption:
 4.	Predict the source for each observation in the left-out eruption sample.
 """
 
+import glob as glob
+import pickle
+import sys
+import time
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from tqdm.notebook import tqdm
-
-
-from sklearn.ensemble import VotingClassifier
+from rich.console import Console
+from rich.progress import track
+from rich.prompt import Prompt
+from rich.theme import Theme
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.ensemble import (
+    GradientBoostingClassifier,
+    RandomForestClassifier,
+    VotingClassifier,
+)
 from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import (
     KFold,
+    RepeatedStratifiedKFold,
     StratifiedKFold,
     cross_val_score,
     cross_validate,
     train_test_split,
 )
-from sklearn.model_selection import RepeatedStratifiedKFold
-from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from tqdm import tqdm
 
-
-import time
-import sys
-import pickle
-
-sys.path.append(r"C:\Users\jlubbers\OneDrive - DOI\Research\Coding\Python_scripts")
 # custom plotting defaults
 import mpl_defaults
-
-import glob as glob
 
 
 # from https://github.com/amueller/introduction_to_ml_with_python/blob/master/mglearn/tools.py
@@ -128,11 +128,22 @@ def delta_confusion_matrix(
     return img
 
 
-data = pd.read_excel(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\B4_training_data_transformed_v2.xlsx"
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
 )
+console = Console(theme=custom_theme)
+
+export_path = Prompt.ask("[bold gold1] Enter the path to where overall results should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
+
+data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
+data_path = data_path.replace('"',"") 
+
+data = pd.read_excel(
+    f"{data_path}\\\B4_training_data_transformed_v2.xlsx")
+
 model_weights = pd.read_excel(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\deployment_votingclassifier_weights.xlsx"
+    f"{data_path}\\\deployment_votingclassifier_weights.xlsx"
 )
 major_elements = data.loc[:, "Si_ppm":"P_ppm"].columns.tolist()
 trace_elements = data.loc[:, "Ca":"U"].columns.tolist()
@@ -159,7 +170,7 @@ rs = 0
 
 estimators = [
     ("lda", LinearDiscriminantAnalysis(shrinkage=0.3, solver="lsqr")),
-    ("logreg", LogisticRegression(C=10, penalty="l2", solver="newton-cg")),
+    ("logreg", LogisticRegression(C=10, penalty="l2", solver="newton-cg",max_iter = 250)),
     ("knc", KNeighborsClassifier(algorithm="auto", n_neighbors=5)),
     ("svc", SVC(random_state=rs, C=10, gamma=1, probability=True)),
     (
@@ -186,19 +197,37 @@ vcs_tuned = VotingClassifier(
 df = data.set_index("eruption")
 
 # where everything gets dumped
-folder_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outpus\variance_test"
-print("STARTING VARIANCE ANALYSIS...THIS IS GOING TO TAKE A WHILE")
-for option in tqdm(["major", "rfe"]):
+# ASK THE USER IF THEY WANT TO CHANGE THE OUTPUT DIRECTORY FOR THE SAVED MODEL
+# IF N, THEN IT IS THE SAME AS THE SCRIPT LOCATION
+dir_change = Prompt.ask(
+    "[bold gold1]\n\n2. Do you want to change the output file directory. It is recommended that this output directory is its own folder because one csv will be generated for each eruption [y/n][bold gold1]"
+)
+
+if dir_change == "y":
+    output_dir = Prompt.ask("[bold gold1]2a. Enter the output directory[bold gold1]")
+else:
+    output_dir = export_path
+output_dir = output_dir.replace('"', "")
+
+console.print(f"\nOVERALL VARIANCE RESULT SPREADSHEET DIRECTORY:\n{export_path}\n", style="path")
+
+console.print(f"\nINDIVIDUAL VARIANCE RESULT SPREADSHEET AND FIGURE DIRECTORY:\n{output_dir}\n", style="path")
+
+console.print("STARTING VARIANCE ANALYSIS...THIS IS GOING TO TAKE A WHILE",style = "main")
+
+
+for option in ["major", "rfe"]:
     if option == "major":
         myfeatures = major_elements
-        print("Working on major element variance analysis")
+        console.print("Working on major element variance analysis",style = "main")
 
     elif option == "rfe":
         myfeatures = rfe_features
-        print("Working on rfe element variance analysis")
-    print(f"Your features are {myfeatures}")
-    for e in tqdm(eruptions, total=len(eruptions), unit="models"):
-        # print(f"Working on the {e} eruption")
+        console.print("Working on rfe element variance analysis",style = "main")
+    console.print(f"Your features are {myfeatures}",style = "result")
+
+    for e in tqdm(range(len(eruptions))):
+        # progress.console.print(f"working on eruption: {e}")
         # generate a new random composition based off analytical uncertainty
         # for each iteration of the run
         random_comps = np.random.normal(
@@ -210,14 +239,14 @@ for option in tqdm(["major", "rfe"]):
         df[major_elements + trace_elements] = np.array(random_comps)
         # this is where you choose your features
         X_train = df.loc[
-            [eruption for eruption in eruptions if eruption != e], myfeatures
+            [eruption for eruption in eruptions if eruption != eruptions[e]], myfeatures
         ]
-        X_test = df.loc[e, myfeatures]
+        X_test = df.loc[eruptions[e], myfeatures]
 
         y_train = df.loc[
-            [eruption for eruption in eruptions if eruption != e], "volcano"
+            [eruption for eruption in eruptions if eruption != eruptions[e]], "volcano"
         ]
-        y_test = df.loc[e, "volcano"]
+        y_test = df.loc[eruptions[e], "volcano"]
 
         cv = RepeatedStratifiedKFold(n_splits=6, n_repeats=5, random_state=rs)
         vcs_tuned_scores = cross_validate(vcs_tuned, X_train, y_train, cv=cv, n_jobs=-1)
@@ -231,10 +260,68 @@ for option in tqdm(["major", "rfe"]):
         )
         proba_df.insert(0, "Target", y_test.tolist())
         proba_df.insert(1, "Prediction", vcs_tuned.predict(X_test))
-        proba_df.index = proba_df.shape[0] * [e]
+        proba_df.index = proba_df.shape[0] * [eruptions[e]]
         proba_df.index.name = "eruption"
         output_report = pd.concat([proba_df, X_test], axis="columns")
         output_report.to_excel(
-            f"{folder_path}\{e}_prediction_probabilities_vcs_{option}_tuned.xlsx",
+            f"{output_dir}\{eruptions[e]}_prediction_probabilities_vcs_{option}_tuned.xlsx",
             index=True,
         )
+            
+
+infiles = glob.glob("{}/*.xlsx".format(output_dir))
+
+rfe_files = [file for file in infiles if "rfe" in file]
+
+major_files = [file for file in infiles if "major" in file]
+
+for option in track(["major", "rfe"],description = "each feature space option"):
+    if option == "major":
+        files = major_files
+        color = "C1"
+    elif option == "rfe":
+        files = rfe_files
+        color = "C0"
+
+    df_list = []
+
+    for file in tqdm(files):
+        df = pd.read_excel(file)
+        df_list.append(df)
+
+    combined_df = pd.concat(df_list)
+    combined_df["eruption"] = combined_df["eruption"].astype(str)
+    combined_df.set_index("eruption", inplace=True)
+    combined_df.to_excel(f"{export_path}\\vcs_{option}_variance_results.xlsx")
+
+    for eruption in eruptions:
+        fig, ax = plt.subplots()
+        combined_df.loc[eruption, :].boxplot(
+            column=sorted(volcanoes),
+            ax=ax,
+            boxprops=dict(color=color, facecolor="whitesmoke"),
+            medianprops=dict(color=color, lw=1),
+            capprops=dict(linewidth=0),
+            whiskerprops=dict(color=color),
+            flierprops=dict(markeredgecolor=color, alpha=0.5),
+            showfliers=True,
+            patch_artist=True,
+        )
+        xticklabels = ax.get_xticklabels()
+        ax.set_xticklabels(xticklabels, rotation=90)
+        ax.set_ylabel("Probability")
+        ax.minorticks_off()
+        ax.grid()
+        ax.set_title(
+            f"{combined_df.loc[eruption,'Target'].unique()[0]} {eruption} n = {combined_df.loc[eruption,:].shape[0]} ",
+            loc="left",
+        )
+        plt.savefig(
+            f"{export_path}\{eruption}_{option}_predictions_boxplot.pdf",
+            bbox_inches="tight",
+        )
+        plt.close()
+
+
+        
+

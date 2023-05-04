@@ -1,34 +1,41 @@
 """
 DERKACHEV ET AL 2018 SAMPLE PREDICTIONS
 """
+import pickle
 import sys
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-import matplotlib.pyplot as plt
-
+import seaborn as sns
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
+from pyrolite.plot import density, pyroplot
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.theme import Theme
 from scipy.stats import ks_2samp, ttest_ind
-from pyrolite.plot import pyroplot, density
-
-
-import seaborn as sns
+from tqdm import tqdm
 
 # custom plotting defaults
 import mpl_defaults
-import pickle
 
-from tqdm import tqdm
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
+)
+console = Console(theme=custom_theme)
+
+export_path = Prompt.ask("[bold gold1] Enter the path to where overall results should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
+
+data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
+data_path = data_path.replace('"',"") 
 
 
-# where all the figures get dumped
-export_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs"
 
-vcs_load = pickle.load(open(r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\Aleutian_tuned_vcs_classifier_trace_deployment.sav",'rb'))
+vcs_load = pickle.load(open(f"{data_path}\Aleutian_tuned_vcs_classifier_trace_deployment.sav",'rb'))
 
-derk_data = pd.read_excel(r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\Derkachev_test_data_transformed.xlsx").set_index('Eruption ID')
+derk_data = pd.read_excel(f"{data_path}\Derkachev_test_data_transformed.xlsx").set_index('Eruption ID')
 derk_samples = derk_data.index.unique().tolist()
 
 myfeatures = [
@@ -95,7 +102,7 @@ sorted_abbreviations = [
 ]
 
 training_data = pd.read_excel(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\B4_training_data_transformed_v2.xlsx").set_index('volcano')
+    f"{data_path}\B4_training_data_transformed_v2.xlsx").set_index('volcano')
 volcanoes = training_data.index.unique().tolist()
 
 mean_df = pd.DataFrame()

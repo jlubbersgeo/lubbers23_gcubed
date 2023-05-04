@@ -11,37 +11,26 @@ the same leaf within a decision tree, normalized by the number of trees in the f
 """
 
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-from aleutian_colors import create_aleutian_colors
-
-
-import sys
-
-sys.path.append(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Coding\QuatResearch23_tephra_classification\kinumaax\source"
-)
-
-from kinumaax import learning as kl
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.theme import Theme
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.manifold import MDS
 from sklearn.model_selection import (
+    RepeatedStratifiedKFold,
     cross_validate,
     train_test_split,
 )
-from sklearn.model_selection import RepeatedStratifiedKFold
-from sklearn.manifold import MDS
-
-
-import time
-import sys
 
 # custom plotting defaults
 import mpl_defaults
+from aleutian_colors import create_aleutian_colors
+from kinumaax.source.kinumaax import learning as kl
 
-# where all the figures get dumped
-export_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs"
 
 def get_proximity_matrix(classifier,X_train):
     
@@ -81,9 +70,19 @@ def get_proximity_matrix(classifier,X_train):
 
 
 
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
+)
+console = Console(theme=custom_theme)
+
+export_path = Prompt.ask("[bold gold1] Enter the path to where figures should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
+
+data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
+data_path = data_path.replace('"',"") 
+
 data = pd.read_excel(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\B4_training_data_transformed_v2.xlsx"
-).set_index('volcano')
+    f"{data_path}\\\B4_training_data_transformed_v2.xlsx").set_index("volcano")
 major_elements = data.loc[:, "Si_ppm":"P_ppm"].columns.tolist()
 trace_elements = data.loc[:, "Ca":"U"].columns.tolist()
 ratios = data.loc[:, "Sr/Y":"Rb/Cs"].columns.tolist()
@@ -179,8 +178,9 @@ for features in [major_elements,rfe_features]:
     scores = cross_validate(clf, X_train, y_train, cv=cv, n_jobs=-1)
     clf.fit(X_train, y_train)
     test_accuracies = scores["test_score"]
-    print(
-        f"Mean test accuracy: {np.round(np.mean(test_accuracies),3)} ± {np.round(np.std(test_accuracies),3)}"
+    console.print(f"feature space: {features}")
+    console.print(
+        f"Mean test accuracy: {np.round(np.mean(test_accuracies),3)} ± {np.round(np.std(test_accuracies),3)}",style = "result"
     )
     #proximity matrix
     prox_mat = get_proximity_matrix(clf, X_train)

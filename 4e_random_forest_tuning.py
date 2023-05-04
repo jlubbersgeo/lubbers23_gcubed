@@ -1,18 +1,27 @@
+""" RANDOM FOREST TUNING
 """
-GRADIENT BOOSTING CLASSIFIER HYPERPARMETER TUNING
 
-"""
+import sys
+import time
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.model_selection import GridSearchCV
-from sklearn.ensemble import GradientBoostingClassifier
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.theme import Theme
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import (
+    GridSearchCV,
+    RepeatedStratifiedKFold,
     cross_validate,
     train_test_split,
 )
-from sklearn.model_selection import RepeatedStratifiedKFold
-import time
+
+# custom plotting defaults
+import mpl_defaults
+
+
 # from https://github.com/amueller/introduction_to_ml_with_python/blob/master/mglearn/tools.py
 # and tweaked slightly to add **kwargs for pcolor
 def heatmap(values, xlabel, ylabel, xticklabels, yticklabels, cmap=None,
@@ -44,21 +53,30 @@ def heatmap(values, xlabel, ylabel, xticklabels, yticklabels, cmap=None,
             ax.text(x, y, fmt % value, color=c, ha="center", va="center",fontsize = label_size)
             
     return img
-# custom plotting defaults
-import mpl_defaults
 
-# where all the figures get dumped
-export_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs"
-
-##############################################################################
-# IMPORT DATA
-##############################################################################
-data = pd.read_excel(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\B4_training_data_transformed_v2.xlsx"
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
 )
+console = Console(theme=custom_theme)
+
+export_path = Prompt.ask("[bold gold1] Enter the path to where figures should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
+
+data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
+data_path = data_path.replace('"',"") 
+
+data = pd.read_excel(
+    f"{data_path}\\\B4_training_data_transformed_v2.xlsx")
+
+
 major_elements = data.loc[:, "Si_ppm":"P_ppm"].columns.tolist()
 trace_elements = data.loc[:, "Ca":"U"].columns.tolist()
 ratios = data.loc[:, "Sr/Y":"Rb/Cs"].columns.tolist()
+
+
+#######################################################################
+################## BASE RANDOM FOREST MODEL#######################
+#######################################################################
 rfe_features = [
     "Cs",
     "Nb",
@@ -73,65 +91,60 @@ rfe_features = [
     "La/Yb",
     "K_ppm",
 ]
+
 rs = 0
 
-#######################################################################
-################## BASE GRADIENT BOOSTING MODEL#######################
-#######################################################################
-print("\n WORKING ON BASE GRADIENT BOOSTING CLASSIFIER")
 X_train, X_test, y_train, y_test = train_test_split(
     data.loc[:, rfe_features],
     data.loc[:, "volcano"],
     stratify=data.loc[:, "volcano"],
     test_size=0.25,
-    random_state=rs,
+    random_state = rs
 )
-clf = GradientBoostingClassifier(random_state=rs)
+
+
+clf = RandomForestClassifier(random_state = rs)
 cv = RepeatedStratifiedKFold(n_splits=7, n_repeats=5, random_state=rs)
 scores = cross_validate(clf, X_train, y_train, cv=cv, n_jobs=-1)
-clf.fit(X_train, y_train)
-test_accuracies = scores["test_score"]
-print(
-    f"\nMean test accuracy: {np.round(np.mean(test_accuracies),3)} ± {np.round(np.std(test_accuracies),3)}\n"
-)
+clf.fit(X_train,y_train)
+test_accuracies = scores['test_score']
+console.print(f"Mean test accuracy: {np.round(np.mean(test_accuracies),3)} ± {np.round(np.std(test_accuracies),3)}",style = "result")
 
 #####################################################################
 ########################## HYPERARAMETER GRID ######################
 ###################################################################
-param_grid = {'learning_rate' : 10.**np.arange(-3,3),
+param_grid = {'criterion': ['gini', 'entropy'],
               'n_estimators' : [100,250, 500, 1000] ,
-              'max_depth': [2,3,5,7]
+              'max_depth': [2,3,5,7,10,20]
              }
 t0 = time.time()
 grid_search = GridSearchCV(
     estimator=clf, param_grid=param_grid, cv=5, n_jobs=-1, verbose=1,error_score = 'raise'
 )
 
-print(f"\nSEARCHING GRID SPACE FOR OPTIMAL HYPERPARAMETERS (TAKES ABOUT 15 MIN)\n")
-
 grid_search.fit(X_train,y_train)
 t1 = time.time()
 t_total = (t1 - t0)/60
-print(f"\nGradient Boosting Classifier GridSearchCV completed in:\n{t_total} min\n")
-
+console.print(f"\nRandom Forest Classifier GridSearchCV completed in:\n{np.round(t_total,2)} min",style = "result")
 report = pd.DataFrame.from_dict(grid_search.cv_results_).set_index('param_max_depth')
+
 
 ######################################################################################
 ############################### OUTPUT FIGURE ########################################
 #####################################################################################
-fig, ax = plt.subplots(2,2, figsize = (6,7),constrained_layout = True)
+fig, ax = plt.subplots(3,2, figsize = (6,7),constrained_layout = True)
 axes = ax.ravel()
 
 for a,depth in zip(axes,param_grid["max_depth"]):
     report_scores = report.loc[depth,"mean_test_score"].to_numpy()
-    report_scores = report_scores.reshape(len(param_grid["learning_rate"]), len(param_grid["n_estimators"]))
+    report_scores = report_scores.reshape(len(param_grid["criterion"]), len(param_grid["n_estimators"]))
 
     h = heatmap(
         report_scores,
-        xlabel="n",
+        xlabel="n estimators",
         xticklabels=param_grid["n_estimators"],
-        ylabel="lr",
-        yticklabels=param_grid["learning_rate"],
+        ylabel="criterion",
+        yticklabels=param_grid["criterion"],
         vmin = .5,
         vmax = 1,
         fmt="%0.3f",
@@ -141,13 +154,13 @@ for a,depth in zip(axes,param_grid["max_depth"]):
         cmap = 'PuBu'
 
     )
-    if depth == 2 or depth == 3:
+    if depth == 2 or depth == 3 or depth == 5 or depth == 7:
         a.set_xlabel('')
-    if depth == 3 or depth == 7:
+    if depth == 3 or depth == 7 or depth == 20:
         a.set_ylabel('')
     
     a.minorticks_off()
     a.set_title(f'Max Depth: {depth}',fontsize = 16)
-# cbar = fig.colorbar(h, ax = ax, label = "mean accuracy", shrink = .6, orientation = 'horizontal')
-plt.savefig('{}\gradientboosting_hyperparams_plot.pdf'.format(export_path),bbox_inches = 'tight')
+cbar = fig.colorbar(h, ax = ax, label = "mean accuracy", shrink = .6, orientation = 'horizontal')
+plt.savefig('{}\Randomforest_hyperparams_plot.pdf'.format(export_path),bbox_inches = 'tight')
 plt.show()

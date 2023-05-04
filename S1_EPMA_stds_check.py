@@ -1,9 +1,11 @@
-import pandas as pd
-import numpy as np
+from warnings import simplefilter
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
 import statsmodels.api as sm
-from warnings import simplefilter
+
 simplefilter(action='ignore', category=RuntimeWarning)
 from rich.console import Console
 from rich.progress import track
@@ -14,9 +16,18 @@ from rich.theme import Theme
 import mpl_defaults
 
 # where all the figures get dumped
-export_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs"
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
+)
+console = Console(theme=custom_theme)
 
-inpath = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\spreadsheets\Lubbers23_QuatResearch_supplementary_data.xlsx"
+export_path = Prompt.ask("[bold gold1] Enter the path to where spreadsheets should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
+
+
+inpath = Prompt.ask("[bold gold1]Enter the path the the supplementary data file")
+inpath = inpath.replace('"',"")
+
 data = pd.read_excel(inpath, sheet_name="EPMA_secondary_standards").set_index("standard")
 stds_data = pd.read_excel(inpath, sheet_name="EPMA_accepted_standards").set_index("standard")
 

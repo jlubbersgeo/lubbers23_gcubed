@@ -1,32 +1,44 @@
+import pickle
+import sys
+
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import matplotlib.gridspec as grid_spec
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import seaborn as sns
+from cartopy.mpl.gridliner import Gridliner
+from cartopy.mpl.ticker import LatitudeFormatter, LongitudeFormatter
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
+from pyrolite.plot import density, pyroplot
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.theme import Theme
 from scipy.stats import ks_2samp, ttest_ind
-from pyrolite.plot import pyroplot, density
-import matplotlib.gridspec as grid_spec
-import matplotlib.ticker as mticker
+from tqdm import tqdm
 
-
-import seaborn as sns
-import sys
 # custom plotting defaults
 import mpl_defaults
-import pickle
 
-import cartopy.feature as cfeature
-import cartopy.crs as ccrs
-from cartopy.mpl.ticker import LatitudeFormatter, LongitudeFormatter
-from cartopy.mpl.gridliner import Gridliner
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
+)
+console = Console(theme=custom_theme)
 
-from tqdm import tqdm
-export_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs"
+export_path = Prompt.ask("[bold gold1] Enter the path to where overall results should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
+
+data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
+data_path = data_path.replace('"',"") 
 
 
-vcs_load = pickle.load(open(r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\Aleutian_tuned_vcs_classifier_trace_deployment.sav",'rb'))
 
-iodp_data = pd.read_excel(r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\IODP_data_transformed.xlsx").set_index('IODP_sample')
+vcs_load = pickle.load(open(f"{data_path}\Aleutian_tuned_vcs_classifier_trace_deployment.sav",'rb'))
+
+iodp_data = pd.read_excel(f"{data_path}\IODP_data_transformed.xlsx").set_index('IODP_sample')
 iodp_samples = iodp_data.index.unique().tolist()
 iodp_data.insert(0,'Site', [sample.split('-')[0] for sample in iodp_data.index.tolist()])
 iodp_data.insert(1,'Hole', [sample.split('-')[1] for sample in iodp_data.index.tolist()])
@@ -56,7 +68,7 @@ soft_predictions.insert(0,'Age (yrs)',iodp_data['Age (yrs)'])
 samples = soft_predictions.index.unique()
 
 training_data = pd.read_excel(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\B4_training_data_transformed_v2.xlsx"
+    f"{data_path}\B4_training_data_transformed_v2.xlsx"
 ).set_index('volcano')
 
 volcanoes = training_data.index.unique().tolist()

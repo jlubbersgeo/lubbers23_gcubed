@@ -17,32 +17,37 @@ to be calculated. The scenarios are as follows:
 6. A subset of RFE features
 """
 
+import time
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-
-import sys
-
-sys.path.append(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Coding\lubbers23_gcubed\kinumaax\source"
-)
-
-from kinumaax import learning as kl
-from sklearn.feature_selection import RFE, RFECV
-from sklearn.metrics import classification_report
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.table import Table
+from rich.theme import Theme
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import RFE, RFECV
+from sklearn.metrics import (
+    PrecisionRecallDisplay,
+    average_precision_score,
+    classification_report,
+    precision_recall_curve,
+)
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import precision_recall_curve
-from sklearn.metrics import average_precision_score
-from sklearn.metrics import PrecisionRecallDisplay
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.preprocessing import label_binarize
 
-import time
 import mpl_defaults
+from kinumaax.source.kinumaax import learning as kl
 
-# where all the figures get dumped
-export_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs"
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
+)
+console = Console(theme=custom_theme)
+
+export_path = Prompt.ask("[bold gold1] Enter the path to where figures should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
 # from https://github.com/amueller/introduction_to_ml_with_python/blob/master/mglearn/tools.py
 # and tweaked slightly to add **kwargs for pcolor
 def delta_confusion_matrix(
@@ -110,9 +115,13 @@ def delta_confusion_matrix(
 
 t0 = time.time()
 
+data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
+data_path = data_path.replace('"',"") 
+
 data = pd.read_excel(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\B4_training_data_transformed_v2.xlsx"
-)
+    f"{data_path}\\\B4_training_data_transformed_v2.xlsx")
+
+
 major_elements = data.loc[:, "Si_ppm":"P_ppm"].columns.tolist()
 trace_elements = data.loc[:, "Ca":"U"].columns.tolist()
 ratios = data.loc[:, "Sr/Y":"Rb/Cs"].columns.tolist()
@@ -121,7 +130,7 @@ data.head()
 ################################################################################
 ############################# MAJOR ELEMENTS AS FEATURES ######################
 ################################################################################
-print("\nWORKING ON MAJOR ELEMENTS AS FEATURES\n")
+console.print("\nWORKING ON MAJOR ELEMENTS AS FEATURES\n", style = "main")
 rs = 0
 # instantiate model with algorithm type, # of estimators,
 # max depth of the trees, and fix the random state
@@ -144,7 +153,7 @@ majors_model.get_cross_val_score(
 ################################################################################
 ############################# TRACE ELEMENTS AS FEATURES ######################
 ################################################################################
-print("\nWORKING ON TRACE ELEMENTS AS FEATURES\n")
+console.print("\nWORKING ON TRACE ELEMENTS AS FEATURES\n",style = "main")
 traces_model = kl.tephraML(name="trace_elements")
 traces_model.instantiate(
     model_type="random_forest", n_estimators=500, max_depth=6, random_state=rs
@@ -164,7 +173,7 @@ traces_model.get_cross_val_score(
 ################################################################################
 ############################# TRACE RATIOS AS FEATURES ######################
 ################################################################################
-print("\nWORKING ON TRACE ELEMENT RATIOS AS FEATURES\n")
+console.print("\nWORKING ON TRACE ELEMENT RATIOS AS FEATURES\n",style = "main")
 ratios_model = kl.tephraML(name="trace_ratios")
 ratios_model.instantiate(
     model_type="random_forest", n_estimators=500, max_depth=6, random_state=rs
@@ -184,7 +193,7 @@ ratios_model.get_cross_val_score(
 ################################################################################
 ############################# ALL 3 ABOVE SCENARIOS COMBINED AS FEATURES #######
 ################################################################################
-print("\nWORKING ON MAJOR ELEMENTS + TRACE ELEMENTS + TRACE ELEMENT RATIOS AS FEATURES\n")
+console.print("\nWORKING ON MAJOR ELEMENTS + TRACE ELEMENTS + TRACE ELEMENT RATIOS AS FEATURES\n",style = "main")
 all_model = kl.tephraML(name="all_elements")
 all_model.instantiate(
     model_type="random_forest", n_estimators=500, max_depth=6, random_state=rs
@@ -206,7 +215,7 @@ all_model.get_cross_val_score(
 ################################################################################
 ############################# COMPUTE RECURRING FEATURE ELIMINATION ############
 ################################################################################
-print('\n')
+console.print('\n')
 all_model.compute_rfe(cross_validate=True, step=1, cv=7)
 
 ################################################################################
@@ -241,13 +250,13 @@ labels = [label if "ppm" not in label else label.split("_")[0] for label in labe
 ax.set_xticklabels(labels)
 ax.set_ylabel("Mean decrease in accuracy")
 plt.savefig('{}\RFE_annotated_barplot.pdf'.format(export_path),bbox_inches = "tight")
-plt.show()
+plt.show(block = False)
 
 
 ################################################################################
 ############################# TOP RANKED RFE ELEMENTS AS FEATURES ##############
 ################################################################################
-print("\nWORKING ON TOP RANKED RFE FEATURES AS FEATURES\n")
+console.print("\nWORKING ON TOP RANKED RFE FEATURES AS FEATURES\n",style = "main")
 useful_features = all_model.rfe_results.set_index("rank").loc[1, :]["feature"].tolist()
 # useful_features.remove("133Cs")
 bad_features = ['Mn','Mn_ppm', "P_ppm", "Ti_ppm"]
@@ -272,7 +281,6 @@ rfe_model.get_cross_val_score(
 ################################################################################
 ############################# PLOT RFE PRECISION RECALL ######################
 ################################################################################
-dark_mode = False
 colorblind_colors = mpl_defaults.create_colorblind_palette(n=9)
 rfe_stats_list = []
 rfe_features = all_model.rfe_results.sort_values(by="importance", ascending=False)[
@@ -342,25 +350,13 @@ ax.legend(
 plt.savefig(
     "{}\RFE_precision_recall_summary.pdf".format(export_path), bbox_inches="tight"
 )
-if dark_mode is True:
 
-    mpl_defaults.make_dark_bkgd_compatible(ax=ax, bkgd_color="none")
-    ax.set_xlim(0,1.05)
-    ax.set_ylim(0,1.05)
-    plt.savefig(
-        "{}\RFE_precision_recall_summary_darkmode.pdf".format(export_path),
-        bbox_inches="tight",
-    )
-    plt.savefig(
-        "{}\RFE_precision_recall_summary_darkmode.png".format(export_path),
-        bbox_inches="tight",
-    )
-plt.show()
+plt.show(block = False)
 
 ################################################################################
 ############################# FINAL FEATURES AS FEATURES ######################
 ################################################################################
-print("\nWORKING ON TOP RANKED PETROLOGICALLY SIFNICANG ELEMENTS AS FEATURES\n")
+console.print("\nWORKING ON TOP RANKED PETROLOGICALLY SIFNICANG ELEMENTS AS FEATURES\n",style = "main")
 rfe_small_model = kl.tephraML(name="rfe_subset_elements")
 rfe_small_model.instantiate(
     model_type="random_forest", n_estimators=500, max_depth=6, random_state=rs
@@ -414,7 +410,7 @@ stats_df = stats_df.reset_index().set_index(["model_type", "volcano"])
 ################################################################################
 ############################# SAVING STATS FOR EACH MODEL SCENARIO #############
 ################################################################################
-print("\nSAVING ALL SCENARIOS STATISTICS\n")
+console.print("\nSAVING ALL SCENARIOS STATISTICS\n",style = "main")
 stats_df.loc[
     (
         [
@@ -429,6 +425,35 @@ stats_df.loc[
     ),
     :,
 ].T.to_excel("{}\Feature_engineering_summary_table.xlsx".format(export_path))
+
+stats_df = stats_df.loc[
+    (
+        [
+            "major_elements",
+            "trace_elements",
+            "trace_ratios",
+            "all_elements",
+            "rfe_elements",
+            "rfe_subset_elements"
+        ],
+        ["weighted avg"],
+    ),
+    :,
+].T
+df = pd.read_excel(f"{export_path}\Feature_engineering_summary_table.xlsx")
+df = df.iloc[2:,:]
+output_table = df
+display_table = Table(title="Feature space performance metric comparison")
+for column in df.columns.tolist():
+
+    display_table.add_column(column, style="result")
+
+rows = output_table.values.tolist()
+rows = [[str(el) for el in row] for row in rows]
+for row in rows:
+    display_table.add_row(*row)
+
+console.print(display_table)
 
 
 ################################################################################
@@ -539,25 +564,12 @@ plt.savefig(
     "{}\Feature_selection_precision_recall_summary.pdf".format(export_path), bbox_inches="tight"
 )
 
-
-if dark_mode is True:
-
-    mpl_defaults.make_dark_bkgd_compatible(ax=ax, bkgd_color="none")
-    ax.set_xlim(0,1.05)
-    ax.set_ylim(0,1.05)
-    plt.savefig(
-        "{}\Feature_selection_precision_recall_summary_darkmode.pdf".format(export_path), bbox_inches="tight"
-    )
-    plt.savefig(
-        "{}\Feature_selection_precision_recall_summary_darkmode.png".format(export_path), bbox_inches="tight"
-    )
-plt.show()
+plt.show(block = False)
 
 ##################################################################################################
 ############################ MANUSCRIPT FIGURE 3 ################################################
 #################################################################################################
 labels = sorted(majors_model.test_target_data.unique())
-dark_mode = True
 fig, ax = plt.subplot_mosaic(
     [
     ["major_bar","rfe_bar"],
@@ -608,7 +620,6 @@ rfe_small_model.plot_feature_importance(
 # ax["rfe_bar"].minorticks_off()
 bar_labels = [label.get_text() for label in ax["rfe_bar"].get_xticklabels()]
 ax["rfe_bar"].set_xticklabels([label.split("_")[0] for label in bar_labels])
-# ax["rfe_bar"].set_ylabel("Accuracy decrease", fontsize=14)
 ax["rfe_bar"].set_xlabel("Feature")
 mpl_defaults.left_bottom_axes(ax["rfe_bar"])
 for patch, label in zip(ax["rfe_bar"].patches, ax["rfe_bar"].get_xticklabels()):
@@ -665,14 +676,5 @@ mpl_defaults.label_subplots(np.array(axes)[:2], location = 'upper right',fontsiz
 
 plt.savefig('{}\RFE_subset_vs_major_summary_confusion_matrix.pdf'.format(export_path),bbox_inches = "tight")
 
-if dark_mode is True:
-    for a in axes:
-        mpl_defaults.make_dark_bkgd_compatible(a, bkgd_color="none")
 
-    plt.savefig('{}\RFE_subset_vs_major_summary_confusion_matrix_darkmode.pdf'.format(export_path),bbox_inches = "tight")
-
-    plt.savefig('{}\RFE_subset_vs_major_summary_confusion_matrix_darkmode.png'.format(export_path),bbox_inches = "tight")
-
-
-
-plt.show()
+plt.show(block = True)

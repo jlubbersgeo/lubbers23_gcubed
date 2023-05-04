@@ -1,26 +1,37 @@
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-
 import sys
 
-from sklearn.model_selection import GridSearchCV
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.theme import Theme
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.model_selection import (
+    GridSearchCV,
+    RepeatedStratifiedKFold,
     cross_validate,
     train_test_split,
 )
-from sklearn.model_selection import RepeatedStratifiedKFold
+
 # custom plotting defaults
 import mpl_defaults
 
-# where all the figures get dumped
-export_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs"
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
+)
+console = Console(theme=custom_theme)
 
+export_path = Prompt.ask("[bold gold1] Enter the path to where figures should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
+
+data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
+data_path = data_path.replace('"',"") 
 
 data = pd.read_excel(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\B4_training_data_transformed_v2.xlsx"
-)
+    f"{data_path}\\\B4_training_data_transformed_v2.xlsx")
+
+
 major_elements = data.loc[:, "Si_ppm":"P_ppm"].columns.tolist()
 trace_elements = data.loc[:, "Ca":"U"].columns.tolist()
 ratios = data.loc[:, "Sr/Y":"Rb/Cs"].columns.tolist()
@@ -59,7 +70,7 @@ cv = RepeatedStratifiedKFold(n_splits=7, n_repeats=5, random_state=rs)
 scores = cross_validate(clf, X_train, y_train, cv=cv, n_jobs=-1)
 clf.fit(X_train,y_train)
 test_accuracies = scores['test_score']
-print(f"Mean test accuracy: {np.round(np.mean(test_accuracies),3)}")
+console.print(f"Mean test accuracy: {np.round(np.mean(test_accuracies),3)}", style = "result")
 
 #####################################################################
 ########################## HYPERARAMETER GRID ######################

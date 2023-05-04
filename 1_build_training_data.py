@@ -19,25 +19,38 @@ separate tidy and transformed spreadsheets of the data. The general workflow is:
 8. Export cleaned untransformed data as well as cleaned transformed data
 """
 
+
+import time
+from warnings import simplefilter
+
 import numpy as np
 import pandas as pd
-import sys
-
-sys.path.append(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Coding\lubbers23_gcubed\kinumaax\source"
-)
-
-from kinumaax import crunching as kc
 import pyrolite.comp
-import time
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.theme import Theme
 
-export_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs"
+from kinumaax.source.kinumaax import crunching as kc
+
+simplefilter(action='ignore', category=FutureWarning)
+simplefilter(action='ignore', category=RuntimeWarning)
+
+
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
+)
+console = Console(theme=custom_theme)
+
+export_path = Prompt.ask("[bold gold1] Enter the path to where spreadsheets should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
+
+
+spreadsheet_path = Prompt.ask("[bold gold1]Enter the path the the supplementary data file")
+spreadsheet_path = spreadsheet_path.replace('"',"")
+
 t0 = time.time()
+console.print("\nWORKING ON PROXIMAL DATA\n",style = "main")
 
-
-print("\nWORKING ON PROXIMAL DATA\n")
-
-spreadsheet_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\spreadsheets\Lubbers23_QuatResearch_supplementary_data.xlsx"
 data = pd.read_excel(spreadsheet_path, sheet_name="major_trace_proximal_train_data")
 shape_original = data.shape
 
@@ -83,24 +96,23 @@ data = kc.remove_strings(data, ignore_cols=ignore_cols)
 
 # check for NaN values in trace element columns
 nan_elements, nan_counts = kc.df_checkna(df=data, cols=trace_elements)
-print("\nThese are the columns that have nans and their values\n")
+console.print("\nThese are the columns that have nans and their values\n",style = "result")
 for element, count in zip(nan_elements, nan_counts):
-    print(element, count)
+    console.print(f"{element} | {count}",style = "result")
 
 if data.index.name != "volcano":
     data = data.set_index("volcano")
 
 volcanoes = data.index.unique().tolist()
-print(f"\nYour volcanoes are: {volcanoes}\n")
+console.print(f"\nYour volcanoes are: {volcanoes}\n",style = "result")
 
-print(
-    f"\nThe shape of your data with NaNs is {data.shape[0]} rows by {data.shape[1]} columns\n"
-)
+console.print(
+    f"\nThe shape of your data with NaNs is {data.shape[0]} rows by {data.shape[1]} columns\n",style = "result")
 
 # drop the rows where there are NaN values in trace element columns
 data = kc.df_dropna(df=data, cols=nan_elements)
-print(
-    f"\nThe shape of your data is {data.shape[0]} rows by {data.shape[1]} columns after NaNs are removed\n"
+console.print(
+    f"\nThe shape of your data is {data.shape[0]} rows by {data.shape[1]} columns after NaNs are removed\n",style = "result"
 )
 
 
@@ -137,15 +149,15 @@ data = pd.concat(
     axis="columns",
 )
 
-print(
-    f"Congrats! You've added the following columns: \n {major_elements_ppm } and their uncertainties to the dataset"
+console.print(
+    f"Congrats! You've added the following columns: \n {major_elements_ppm } and their uncertainties to the dataset",style = "result"
 )
 
 
 data = kc.filter_by_value(data, col_name="TiO2_ppm", value=0, operator="greater_than")
 data = kc.filter_by_value(data, col_name="MnO_ppm", value=0, operator="greater_than")
 data = kc.filter_by_value(data, col_name="P2O5_ppm", value=0, operator="greater_than")
-print(f"The shape of your data is {data.shape[0]} rows by {data.shape[1]} columns")
+console.print(f"The shape of your data is {data.shape[0]} rows by {data.shape[1]} columns",style = "result")
 
 
 to_transform = data.loc[:, major_elements_ppm + trace_elements]
@@ -156,10 +168,10 @@ clr_df.columns = major_elements_ppm + trace_elements + ["O_ppm"]
 
 back_transformed = clr_df.pyrocomp.inverse_CLR()
 if np.allclose(back_transformed * 1e6, to_transform) is True:
-    print("\nCongrats you transformed your data correctly!\n")
+    console.print("\nCongrats you transformed your data correctly!\n",style = "result")
 else:
-    print(
-        "\nYour transformed data nad back transformed data are not the same. Try again\n"
+    console.print(
+        "\nYour transformed data nad back transformed data are not the same. Try again\n",style = "result"
     )
 
 rel_uncertainties = pd.DataFrame(
@@ -245,8 +257,8 @@ shape_final = clr_df.shape
 
 percent_change = 100 * ((shape_original[0] - shape_final[0]) / shape_original[0])
 
-print(
-    f"\nData cleaning has resulted in a {np.round(percent_change,2)}% change in the number of observations\n"
+console.print(
+    f"\nData cleaning has resulted in a {np.round(percent_change,2)}% change in the number of observations\n",style = "result"
 )
 
 
@@ -319,7 +331,7 @@ clean_data.to_excel("{}\B4_training_data_cleaned.xlsx".format(export_path))
 ####################################################################################
 #######################IODP PROCESSING HERE#########################################
 ####################################################################################
-print("\nWORKING ON IODP DATA\n")
+console.print("\nWORKING ON IODP DATA\n",style = "main")
 # import the data
 iodp_data = pd.read_excel(spreadsheet_path, sheet_name="iodp_trace_data")
 
@@ -405,10 +417,10 @@ iodp_clr_df.columns = major_elements_ppm + trace_elements + ["O_ppm"]
 
 back_transformed = iodp_clr_df.pyrocomp.inverse_CLR()
 if np.allclose(back_transformed * 1e6, to_transform) is True:
-    print("\nCongrats you transformed your data correctly!\n")
+    console.print("\nCongrats you transformed your data correctly!\n",style = "result")
 else:
-    print(
-        "\nYour transformed data nad back transformed data are not the same. Try again\n"
+    console.print(
+        "\nYour transformed data nad back transformed data are not the same. Try again\n",style = "result"
     )
 
 rel_uncertainties = pd.DataFrame(
@@ -485,7 +497,7 @@ iodp_clr_df.to_excel("{}\IODP_data_transformed.xlsx".format(export_path))
 ####################################################################################
 #######################DERKACHEV PROCESSING HERE####################################
 ####################################################################################
-print("\nWORKING ON DERKACHEV DATA\n")
+console.print("\nWORKING ON DERKACHEV DATA\n",style = "main")
 
 derk_data = pd.read_excel(spreadsheet_path, sheet_name="derkachev_data")
 # remove the strings
@@ -543,10 +555,10 @@ derk_clr_df.columns = major_elements_ppm + derk_trace_elements + ["O_ppm"]
 
 back_transformed = derk_clr_df.pyrocomp.inverse_CLR()
 if np.allclose(back_transformed * 1e6, to_transform) is True:
-    print("\nCongrats you transformed your data correctly!\n")
+    console.print("\nCongrats you transformed your data correctly!\n",style = "result")
 else:
-    print(
-        "\nYour transformed data nad back transformed data are not the same. Try again\n"
+    console.print(
+        "\nYour transformed data nad back transformed data are not the same. Try again\n",style = "result"
     )
 
 # )
@@ -593,4 +605,5 @@ derk_clr_df = pd.concat(
 derk_clr_df.to_excel("{}\Derkachev_test_data_transformed.xlsx".format(export_path))
 
 t1 = time.time()
-print(f"\nNotebook runtime is {np.round((t1 - t0)/60,2)} minutes\n")
+console.print(f"\nScript runtime is {np.round((t1 - t0)/60,2)} minutes\n",style = "main")
+console.print(f"Spreadsheets output at: {export_path}",style = "path")

@@ -1,35 +1,41 @@
 """ 
 CHECKING FOR NOVEL DATA WITHIN IODP CORE SAMPLES
 """
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
-from pyrolite.plot import pyroplot, density
-from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 from matplotlib.ticker import FormatStrFormatter
-
-
+from pyrolite.plot import density, pyroplot
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.theme import Theme
 
 import mpl_defaults
 
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
+)
+console = Console(theme=custom_theme)
 
-# where all the figures get dumped
-export_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs"
+export_path = Prompt.ask("[bold gold1] Enter the path to where overall results should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
 
-
+data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
+data_path = data_path.replace('"',"") 
 
 
 data = pd.read_excel(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\B4_training_data_transformed_v2.xlsx"
+    f"{data_path}\B4_training_data_transformed_v2.xlsx"
 )
 major_elements = data.loc[:, "Si_ppm":"P_ppm"].columns.tolist()
 trace_elements = data.loc[:, "Ca":"U"].columns.tolist()
 ratios = data.loc[:, "Sr/Y":"Rb/Cs"].columns.tolist()
 
 
-iodp_data = pd.read_excel(r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\IODP_data_transformed.xlsx").set_index('IODP_sample')
+iodp_data = pd.read_excel(f"{data_path}\IODP_data_transformed.xlsx").set_index('IODP_sample')
 iodp_samples = iodp_data.index.unique().tolist()
 iodp_data.insert(0,'drill_site', [sample[:5] for sample in iodp_data.index])
 
@@ -163,7 +169,7 @@ for volcano, pop, j in zip(volcanoes, pops, range(len(volcanoes))):
             ax[i, j].set_ylabel(var)
 plt.savefig("{}\IODP_train_compare_27ka-100yr_pops.pdf".format(export_path),bbox_inches = 'tight')
 
-plt.show()
+plt.show(block = False)
 
 ##########################################################
 ###################### FIGURE S9 #######################
@@ -337,7 +343,7 @@ for coords in diag_indices:
 # save the thing
 
 plt.savefig("{}\IODP_train_compare_pairplot_populations.pdf".format(export_path),bbox_inches = 'tight')
-plt.show()
+plt.show(block = True)
 
 
 

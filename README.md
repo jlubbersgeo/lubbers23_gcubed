@@ -4,6 +4,8 @@ Jordan Lubbers¹, Matthew Loewen¹, Kristi Wallace¹, Michelle Coombs¹, Jason A
 ¹U.S. Geological Survey Alaska Volcano Observatory<br>
 ²U.S. Geological Survey Minerals Energy and Geophysics Science Center<br>
 
+Contact: jlubbers@usgs.gov
+
 This repository is home to the jupyter notebooks and python scripts that recreate the figures of the above manuscript. Below is a brief explanation of each notebook.
 
 ## Explanation of code notebooks
@@ -45,9 +47,9 @@ This repository is home to the jupyter notebooks and python scripts that recreat
 
 19. `aleutian_colors.py`: creates a dictionary of `volcano_name : {**kwargs}` pairs for each volcano in the dataset such that it can be consistently plotted in all figures.
 
-21. `mpl_defaults.py`: establishes default `matplotlib` settings and helper functions to produce figures for the manuscript.
+20. `mpl_defaults.py`: establishes default `matplotlib` settings and helper functions to produce figures for the manuscript.
 
-22. `kinumaax`: A small collection of python scripts to help working with tephra data
+21. `kinumaax`: A small collection of python scripts to help working with tephra data
 
     1. `crunching.py`: has functions used for data cleaning, filtering, unit conversions, etc. Largely used by `build_training_data.py`
 

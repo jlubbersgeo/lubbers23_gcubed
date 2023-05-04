@@ -1,28 +1,24 @@
-""" RANDOM FOREST TUNING
+""" 
+SUPPORT VECTOR MACHINE HYPERPARAMETER TUNING
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-
-import sys
-
-from sklearn.model_selection import  GridSearchCV
-from sklearn.ensemble import RandomForestClassifier
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.theme import Theme
 from sklearn.model_selection import (
+    GridSearchCV,
+    RepeatedStratifiedKFold,
     cross_validate,
     train_test_split,
 )
-from sklearn.model_selection import RepeatedStratifiedKFold
-
-
-import time
+from sklearn.svm import SVC
 
 # custom plotting defaults
 import mpl_defaults
 
-# where all the figures get dumped
-export_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs"
 
 # from https://github.com/amueller/introduction_to_ml_with_python/blob/master/mglearn/tools.py
 # and tweaked slightly to add **kwargs for pcolor
@@ -56,13 +52,24 @@ def heatmap(values, xlabel, ylabel, xticklabels, yticklabels, cmap=None,
             
     return img
 
-data = pd.read_excel(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\B4_training_data_transformed_v2.xlsx"
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
 )
+console = Console(theme=custom_theme)
+
+export_path = Prompt.ask("[bold gold1] Enter the path to where figures should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
+
+data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
+data_path = data_path.replace('"',"") 
+
+data = pd.read_excel(
+    f"{data_path}\\\B4_training_data_transformed_v2.xlsx")
+
+
 major_elements = data.loc[:, "Si_ppm":"P_ppm"].columns.tolist()
 trace_elements = data.loc[:, "Ca":"U"].columns.tolist()
 ratios = data.loc[:, "Sr/Y":"Rb/Cs"].columns.tolist()
-
 
 #######################################################################
 ################## BASE RANDOM FOREST MODEL#######################
@@ -93,64 +100,56 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 
-clf = RandomForestClassifier(random_state = rs)
+clf = SVC()
 cv = RepeatedStratifiedKFold(n_splits=7, n_repeats=5, random_state=rs)
 scores = cross_validate(clf, X_train, y_train, cv=cv, n_jobs=-1)
 clf.fit(X_train,y_train)
 test_accuracies = scores['test_score']
-print(f"Mean test accuracy: {np.round(np.mean(test_accuracies),3)} ± {np.round(np.std(test_accuracies),3)}")
-
+console.print(f"Mean test accuracy: {np.round(np.mean(test_accuracies),3)} ± {np.round(np.std(test_accuracies),3)}",style = "result")
 #####################################################################
 ########################## HYPERARAMETER GRID ######################
 ###################################################################
-param_grid = {'criterion': ['gini', 'entropy'],
-              'n_estimators' : [100,250, 500, 1000] ,
-              'max_depth': [2,3,5,7,10,20]
+param_grid = {'kernel' : ['rbf'],
+              'C' : 10.**np.arange(-5,10),
+              'gamma': 10.**np.arange(-5,10)
              }
-t0 = time.time()
+
 grid_search = GridSearchCV(
     estimator=clf, param_grid=param_grid, cv=5, n_jobs=-1, verbose=1,error_score = 'raise'
 )
 
 grid_search.fit(X_train,y_train)
-t1 = time.time()
-t_total = (t1 - t0)/60
-print(f"\nRandom Forest Classifier GridSearchCV completed in:\n{t_total} min")
-report = pd.DataFrame.from_dict(grid_search.cv_results_).set_index('param_max_depth')
+
+report = pd.DataFrame.from_dict(grid_search.cv_results_)
 
 
 ######################################################################################
 ############################### OUTPUT FIGURE ########################################
 #####################################################################################
-fig, ax = plt.subplots(3,2, figsize = (6,7),constrained_layout = True)
-axes = ax.ravel()
 
-for a,depth in zip(axes,param_grid["max_depth"]):
-    report_scores = report.loc[depth,"mean_test_score"].to_numpy()
-    report_scores = report_scores.reshape(len(param_grid["criterion"]), len(param_grid["n_estimators"]))
 
-    h = heatmap(
-        report_scores,
-        xlabel="n estimators",
-        xticklabels=param_grid["n_estimators"],
-        ylabel="criterion",
-        yticklabels=param_grid["criterion"],
-        vmin = .5,
-        vmax = 1,
-        fmt="%0.3f",
-        val_limit = .5,
-        xtick_rot = 45,
-        ax = a,
-        cmap = 'PuBu'
+report_scores = report["mean_test_score"].to_numpy()
+report_scores = report_scores.reshape(len(param_grid["C"]), len(param_grid["gamma"]))
 
-    )
-    if depth == 2 or depth == 3 or depth == 5 or depth == 7:
-        a.set_xlabel('')
-    if depth == 3 or depth == 7 or depth == 20:
-        a.set_ylabel('')
+fig, ax = plt.subplots(figsize=(8, 8))
+h = heatmap(
+    report_scores,
+    xlabel="gamma",
+    xticklabels=["{:.2E}".format(val) for val in param_grid["gamma"]],
+    ylabel="C",
+    yticklabels=["{:.2E}".format(val) for val in param_grid["C"]],
+    fmt="%0.3f",
+    val_limit = .5,
+    xtick_rot = 45,
+    cmap = 'PuBu'
+
+)
+cbar = fig.colorbar(h, ax = ax, label = "mean accuracy", shrink = .6)
+ax.minorticks_off()
+
     
-    a.minorticks_off()
-    a.set_title(f'Max Depth: {depth}',fontsize = 16)
-cbar = fig.colorbar(h, ax = ax, label = "mean accuracy", shrink = .6, orientation = 'horizontal')
-plt.savefig('{}\Randomforest_hyperparams_plot.pdf'.format(export_path),bbox_inches = 'tight')
+
+plt.savefig('{}\SVM_hyperparams_plot.pdf'.format(export_path),bbox_inches = 'tight')
 plt.show()
+
+

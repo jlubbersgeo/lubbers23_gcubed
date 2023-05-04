@@ -3,35 +3,40 @@ plotting the results frome variance_analysis.py
 
 """
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from tqdm.notebook import tqdm
-from matplotlib.patches import Patch
-import cartopy.crs as ccrs  # for the subplot mosaic of maps
-from matplotlib.colors import LinearSegmentedColormap
 import sys
+
+import cartopy.crs as ccrs  # for the subplot mosaic of maps
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 import ternary
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.patches import Patch
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.theme import Theme
 
 # custom plotting defaults
 import mpl_defaults
 
-
-sys.path.append(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Coding\QuatResearch23_tephra_classification\kinumaax\source"
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
 )
+console = Console(theme=custom_theme)
 
+export_path = Prompt.ask("[bold gold1] Enter the path to where overall results should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
 
-# where all the figures get dumped
-export_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\variance_test"
+data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
+data_path = data_path.replace('"',"") 
 
 
 training_df = pd.read_excel(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\B4_training_data_transformed_v2.xlsx"
+    f"{data_path}\B4_training_data_transformed_v2.xlsx"
 ).set_index('volcano')
-trace_df = pd.read_excel(r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\variance_test\vcs_rfe_variance_results.xlsx").set_index('eruption')
-major_df = pd.read_excel(r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs\variance_test\vcs_major_variance_results.xlsx").set_index('eruption')
+trace_df = pd.read_excel(f"{data_path}\\vcs_rfe_variance_results.xlsx").set_index('eruption')
+major_df = pd.read_excel(f"{data_path}\\vcs_major_variance_results.xlsx").set_index('eruption')
 trace_df.insert(0,'type','trace_elements')
 major_df.insert(0,'type','major_elements')
 
@@ -111,7 +116,7 @@ plt.savefig(
         bbox_inches="tight",
     )
 
-plt.show()
+plt.show(block = False)
 
 ########################################################################
 ########################## MANUSCRIPT FIGURE 6 #########################
@@ -276,7 +281,7 @@ plt.savefig(
     "{}\\vcs_variance_test_comparison_target.pdf".format(export_path), bbox_inches="tight"
 )
 
-plt.show()
+plt.show(block = False)
 
 ########################################################################
 ########################## MANUSCRIPT FIGURE 8 #########################
@@ -361,4 +366,4 @@ fig.legend(loc = 'upper right', title = 'Model Features', title_fontsize = 14, b
 plt.savefig(
     "{}\\ani_veni_mak_variance_ternary.pdf".format(export_path), bbox_inches="tight"
 )
-plt.show()
+plt.show(block = True)

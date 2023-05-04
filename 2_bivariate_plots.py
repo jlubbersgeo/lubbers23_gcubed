@@ -1,19 +1,30 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from aleutian_colors import create_aleutian_colors
 import seaborn as sns
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.theme import Theme
+
 import mpl_defaults
+from aleutian_colors import create_aleutian_colors
 
+custom_theme = Theme(
+    {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
+)
+console = Console(theme=custom_theme)
 
-# where all the figures get dumped
-export_path = r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Writing\Gcubed_ML_Manuscript\code_outputs"
+export_path = Prompt.ask("[bold gold1] Enter the path to where spreadsheets should be exported[bold gold1]")
+export_path = export_path.replace('"',"")
+
+data_path = Prompt.ask("[bold gold1] Enter the path to where the cleaned and transformed data are stored[bold gold1]")
+data_path = export_path.replace('"',"") 
 
 data = pd.read_excel(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Data\B4_training_data_cleaned.xlsx"
+    f"{data_path}\\B4_training_data_cleaned.xlsx"
 ).set_index('volcano')
 transformed_data = pd.read_excel(
-    r"C:\Users\jlubbers\OneDrive - DOI\Research\Mendenhall\Data\B4_training_data_transformed_v2.xlsx"
+    f"{data_path}\\B4_training_data_transformed_v2.xlsx"
 ).set_index('volcano')
 
 volcanoes = data.index.unique().tolist()
@@ -79,27 +90,11 @@ fig.legend(
     ncol=5,
     markerscale=1.5,
 )
-
+fig.suptitle("MANUSCRIPT FIGURE 2",fontsize = 20)
 plt.savefig(
     "{}\\LTPE_concentration_vs_transform_panel.pdf".format(export_path),
     bbox_inches="tight",
 )
 
 
-if dark_mode is True:
-
-    for a in axes:
-        mpl_defaults.make_dark_bkgd_compatible(ax=a, bkgd_color="none")
-        plt.savefig(
-            "{}\\LTPE_concentration_vs_transform_panel_darkbkgd.pdf".format(
-                export_path
-            ),
-            bbox_inches="tight",
-        )
-        plt.savefig(
-            "{}\\LTPE_concentration_vs_transform_panel_darkbkgd.png".format(
-                export_path
-            ),
-            bbox_inches="tight",
-        )
 plt.show()
