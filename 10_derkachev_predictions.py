@@ -1,5 +1,17 @@
 """
 DERKACHEV ET AL 2018 SAMPLE PREDICTIONS
+This is similar to 9b_IODP_predictions, however it is applied to the
+data reported in Derkachev et al., (2018). Because the number of 
+observations is small for the Derkachev samples we also create a synthetic
+dataset based on the standard deviation and mean of the sample populations
+that is comprised of 1000 random samples randomly distributed around that 
+standard deviation and mean. We then also apply our machine learning model
+to this synthetic dataset to compare to the actual observed data.
+
+Finally, we show that our model aligns with the findings of Derkachev
+et al., 2018 by showing in multivariate space where our training data plots
+for the predicted class and how it overlaps with the Derkachev samples.
+
 """
 import pickle
 import sys
@@ -25,17 +37,24 @@ custom_theme = Theme(
 )
 console = Console(theme=custom_theme)
 
-export_path = Prompt.ask("[bold gold1] Enter the path to where overall results should be exported[bold gold1]")
-export_path = export_path.replace('"',"")
+export_path = Prompt.ask(
+    "[bold gold1] Enter the path to where overall results should be exported[bold gold1]"
+)
+export_path = export_path.replace('"', "")
 
-data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
-data_path = data_path.replace('"',"") 
+data_path = Prompt.ask(
+    "[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]"
+)
+data_path = data_path.replace('"', "")
 
 
+vcs_load = pickle.load(
+    open(f"{data_path}\Aleutian_tuned_vcs_classifier_trace_deployment.sav", "rb")
+)
 
-vcs_load = pickle.load(open(f"{data_path}\Aleutian_tuned_vcs_classifier_trace_deployment.sav",'rb'))
-
-derk_data = pd.read_excel(f"{data_path}\Derkachev_test_data_transformed.xlsx").set_index('Eruption ID')
+derk_data = pd.read_excel(
+    f"{data_path}\Derkachev_test_data_transformed.xlsx"
+).set_index("Eruption ID")
 derk_samples = derk_data.index.unique().tolist()
 
 myfeatures = [
@@ -53,11 +72,15 @@ myfeatures = [
     "K_ppm",
 ]
 
-soft_predictions = pd.DataFrame(vcs_load.predict_proba(derk_data.loc[:,myfeatures]), columns = vcs_load.classes_)
-soft_predictions.insert(0,'predicted_class',vcs_load.predict(derk_data.loc[:,myfeatures]))
+soft_predictions = pd.DataFrame(
+    vcs_load.predict_proba(derk_data.loc[:, myfeatures]), columns=vcs_load.classes_
+)
+soft_predictions.insert(
+    0, "predicted_class", vcs_load.predict(derk_data.loc[:, myfeatures])
+)
 soft_predictions.index = derk_data.index
 samples = soft_predictions.index.unique()
-soft_predictions.insert(0,'type','individual')
+soft_predictions.insert(0, "type", "individual")
 
 sorted_locations = [
     "Churchill",
@@ -98,36 +121,40 @@ sorted_abbreviations = [
     "AD",
     "GA",
     "SS",
-    "DV"
+    "DV",
 ]
 
 training_data = pd.read_excel(
-    f"{data_path}\B4_training_data_transformed_v2.xlsx").set_index('volcano')
+    f"{data_path}\B4_training_data_transformed_v2.xlsx"
+).set_index("volcano")
 volcanoes = training_data.index.unique().tolist()
 
 mean_df = pd.DataFrame()
 std_df = pd.DataFrame()
 for sample in samples:
-    m = pd.DataFrame(derk_data.loc[sample,'Date (yymmdd)':].mean(axis = 'rows'))
-    mean_df = pd.concat([mean_df,m.T])
-    s = pd.DataFrame(derk_data.loc[sample,'Date (yymmdd)':].std(axis = 'rows'))
-    std_df = pd.concat([std_df,s.T])
-    
+    m = pd.DataFrame(derk_data.loc[sample, "Date (yymmdd)":].mean(axis="rows"))
+    mean_df = pd.concat([mean_df, m.T])
+    s = pd.DataFrame(derk_data.loc[sample, "Date (yymmdd)":].std(axis="rows"))
+    std_df = pd.concat([std_df, s.T])
+
 mean_df.index = samples
-mean_df.index.name = 'Eruption ID'
+mean_df.index.name = "Eruption ID"
 std_df.index = samples
-std_df.index.name = 'Eruption ID'
+std_df.index.name = "Eruption ID"
 
 
-mean_predictions = pd.DataFrame(vcs_load.predict_proba(mean_df.loc[:,myfeatures]), columns = vcs_load.classes_)
-mean_predictions.insert(0,'predicted_class',vcs_load.predict(mean_df.loc[:,myfeatures]))
+mean_predictions = pd.DataFrame(
+    vcs_load.predict_proba(mean_df.loc[:, myfeatures]), columns=vcs_load.classes_
+)
+mean_predictions.insert(
+    0, "predicted_class", vcs_load.predict(mean_df.loc[:, myfeatures])
+)
 mean_predictions.index = mean_df.index
 
 # generate the 1000 random comps for each sample
 random_df = pd.DataFrame()
 np.random.seed(0)
 for i in range(1000):
-
     random_df = pd.concat(
         [
             random_df,
@@ -162,9 +189,9 @@ combined_df_melted.sort_values(by="variable", inplace=True)
 ##########################################################
 ################# MANUSCRIPT FIGURE 13 ###################
 ##########################################################
-fig, ax = plt.subplots(2,1, figsize = (6,8),layout = 'constrained')
+fig, ax = plt.subplots(2, 1, figsize=(6, 8), layout="constrained")
 axes = ax.ravel()
-for a,sample in zip(axes,samples):
+for a, sample in zip(axes, samples):
     sns.boxplot(
         data=combined_df_melted.loc[sample, :],
         x="variable",
@@ -178,7 +205,7 @@ for a,sample in zip(axes,samples):
         showfliers=False,
         ax=a,
     )
-    a.legend([],frameon = False)
+    a.legend([], frameon=False)
 
     xticklabels = a.get_xticklabels()
 
@@ -187,26 +214,27 @@ for a,sample in zip(axes,samples):
     a.set_xlabel("")
     a.minorticks_off()
 
-legend_elements = [Patch(facecolor='C1', edgecolor='k',
-                        label='Monte Carlo'),
-                Patch(facecolor='C0', edgecolor='k',
-                        label='Individual')]
-fig.legend(handles = legend_elements,bbox_to_anchor = (0.52,1.07),ncol = 2,frameon = True, title = 'Prediction Type')
-mpl_defaults.label_subplots(ax,location = 'upper right',fontsize = 16)
+legend_elements = [
+    Patch(facecolor="C1", edgecolor="k", label="Monte Carlo"),
+    Patch(facecolor="C0", edgecolor="k", label="Individual"),
+]
+fig.legend(
+    handles=legend_elements,
+    bbox_to_anchor=(0.52, 1.07),
+    ncol=2,
+    frameon=True,
+    title="Prediction Type",
+)
+mpl_defaults.label_subplots(ax, location="upper right", fontsize=16)
 plt.savefig(
     "{}\derkachev_prediction_boxplot_panel.pdf".format(export_path), bbox_inches="tight"
 )
-plt.show(block = False)
+plt.show(block=False)
 
 ##########################################################
 ################### FIGURE 14 ############################
 ##########################################################
-vars = [
-    "Nb/U",
-    "Th/La",
-    "Ba/Nb",
-    "K_ppm"
-]
+vars = ["Nb/U", "Th/La", "Ba/Nb", "K_ppm"]
 
 n = len(vars)
 colorblind_colors = mpl_defaults.create_colorblind_palette(n=3)
@@ -217,7 +245,6 @@ iodp_color = colorblind_colors[1]
 
 
 for sample in tqdm(derk_samples):
-
     df1 = pd.DataFrame(
         data=soft_predictions.loc[sample, "predicted_class"].value_counts(),
     ).reset_index()
@@ -244,7 +271,6 @@ for sample in tqdm(derk_samples):
         hist, bins = np.histogram(
             training_data.loc[:, vars[coords[0]]], bins=20, density=True
         )
-
 
         sns.histplot(
             data=training_data.loc[best_soft_prediction, :],
@@ -295,7 +321,7 @@ for sample in tqdm(derk_samples):
             ms=7,
             alpha=0.5,
             mfc=train_color,
-            mec='none',
+            mec="none",
             ls="",
             label="all training data",
         )
@@ -307,7 +333,7 @@ for sample in tqdm(derk_samples):
             ms=7,
             alpha=0.5,
             mfc=train_pred_color,
-            mec='none',
+            mec="none",
             ls="",
             label=f"{best_soft_prediction} training data",
         )
@@ -384,9 +410,9 @@ for sample in tqdm(derk_samples):
             mfc=iodp_color,
             mec="darkmagenta",
             ecolor=iodp_color,
-            elinewidth = 1.5,
-            ms = 5,
-            zorder = 10
+            elinewidth=1.5,
+            ms=5,
+            zorder=10,
         )
 
     # remove all the x and y labels that get auto populated
@@ -406,7 +432,6 @@ for sample in tqdm(derk_samples):
     ax[0, 0].set_ylabel("")
 
     # # making all the x limits for a given column the same
-
 
     # removing inner x and y tick labels so the figure reads cleaner
     for coords in all_indices:
@@ -479,8 +504,6 @@ for sample in tqdm(derk_samples):
         bbox_inches="tight",
     )
     if sample == derk_samples[0]:
-
-        plt.show(block = False)
+        plt.show(block=False)
     else:
-        plt.show(block = True)
-
+        plt.show(block=True)

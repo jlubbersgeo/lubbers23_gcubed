@@ -1,4 +1,13 @@
-""" LOGISTIC REGRESSION TUNING
+"""
+LOGISTIC REGRESSION CLASSIFIER HYPERPARMETER TUNING
+1. train a base estimator using RFE features determined in 
+3_model_feature_selection.py
+
+2. create a hyperparameter grid to search over and train 
+a model using each possible combination in the grid.
+
+3. produce output figure showing the performance results
+for each combination
 
 """
 
@@ -26,15 +35,17 @@ custom_theme = Theme(
 )
 console = Console(theme=custom_theme)
 
-export_path = Prompt.ask("[bold gold1] Enter the path to where figures should be exported[bold gold1]")
-export_path = export_path.replace('"',"")
+export_path = Prompt.ask(
+    "[bold gold1] Enter the path to where figures should be exported[bold gold1]"
+)
+export_path = export_path.replace('"', "")
 
-data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
-data_path = data_path.replace('"',"") 
+data_path = Prompt.ask(
+    "[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]"
+)
+data_path = data_path.replace('"', "")
 
-data = pd.read_excel(
-    f"{data_path}\\\B4_training_data_transformed_v2.xlsx")
-
+data = pd.read_excel(f"{data_path}\\\B4_training_data_transformed_v2.xlsx")
 
 
 major_elements = data.loc[:, "Si_ppm":"P_ppm"].columns.tolist()
@@ -69,16 +80,19 @@ X_train, X_test, y_train, y_test = train_test_split(
     data.loc[:, "volcano"],
     stratify=data.loc[:, "volcano"],
     test_size=0.25,
-    random_state = rs
+    random_state=rs,
 )
 
 
 clf = LogisticRegression()
 cv = RepeatedStratifiedKFold(n_splits=7, n_repeats=5, random_state=rs)
 scores = cross_validate(clf, X_train, y_train, cv=cv, n_jobs=-1)
-clf.fit(X_train,y_train)
-test_accuracies = scores['test_score']
-console.print(f"Mean test accuracy: {np.round(np.mean(test_accuracies),3)} ± {np.round(np.std(test_accuracies),3)}", style = "result")
+clf.fit(X_train, y_train)
+test_accuracies = scores["test_score"]
+console.print(
+    f"Mean test accuracy: {np.round(np.mean(test_accuracies),3)} ± {np.round(np.std(test_accuracies),3)}",
+    style="result",
+)
 
 
 param_grid = {
@@ -97,8 +111,7 @@ grid_search = GridSearchCV(
 grid_search.fit(X_train, y_train)
 
 
-
-report = pd.DataFrame.from_dict(grid_search.cv_results_).set_index('param_solver')
+report = pd.DataFrame.from_dict(grid_search.cv_results_).set_index("param_solver")
 
 
 #####################################################################
@@ -108,8 +121,8 @@ report = pd.DataFrame.from_dict(grid_search.cv_results_).set_index('param_solver
 
 param_grid = {
     "solver": ["newton-cg"],
-    "penalty": ["none","l2"],
-    "C": [.01,1,10,100,1000,10000]
+    "penalty": ["none", "l2"],
+    "C": [0.01, 1, 10, 100, 1000, 10000],
 }
 
 grid_search = GridSearchCV(
@@ -123,8 +136,7 @@ grid_search = GridSearchCV(
 
 grid_search.fit(X_train, y_train)
 
-report = pd.DataFrame.from_dict(grid_search.cv_results_).set_index('param_penalty')
-
+report = pd.DataFrame.from_dict(grid_search.cv_results_).set_index("param_penalty")
 
 
 ######################################################################################
@@ -142,22 +154,28 @@ ax.plot(
     report.loc["l2", "param_C"],
     report.loc["l2", "mean_test_score"],
     lw=3,
-    marker = 'o',
+    marker="o",
     label="newton-cg : l2",
 )
 ax.plot(
     report.loc["none", "param_C"],
     report.loc["none", "mean_test_score"],
     lw=3,
-    marker = 'o',
-    ls = '--',
+    marker="o",
+    ls="--",
     label="newton-cg : none",
 )
 
-ax.set_xscale('log')
+ax.set_xscale("log")
 
-ax.axhline(np.mean(test_accuracies),c = 'k',ls = ':',label = 'lbfgs : l2')
-ax.legend(loc="lower right", title="solver : penalty", fontsize=14, title_fontsize = 16,shadow = True)
+ax.axhline(np.mean(test_accuracies), c="k", ls=":", label="lbfgs : l2")
+ax.legend(
+    loc="lower right",
+    title="solver : penalty",
+    fontsize=14,
+    title_fontsize=16,
+    shadow=True,
+)
 ax.set_xlabel("C value")
 ax.set_ylabel("mean test score")
 mpl_defaults.left_bottom_axes(ax)
@@ -168,5 +186,8 @@ ax.annotate(
     xytext=(10, 0.8),
     arrowprops={"arrowstyle": "-|>"},
 )
-plt.savefig('{}\logisticregression_hyperparams_plot.pdf'.format(export_path),bbox_inches = 'tight')
+plt.savefig(
+    "{}\logisticregression_hyperparams_plot.pdf".format(export_path),
+    bbox_inches="tight",
+)
 plt.show()

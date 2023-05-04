@@ -11,7 +11,10 @@ separate tidy and transformed spreadsheets of the data. The general workflow is:
 
 1. remove strings (e.g., b.d.l. in laser data) and replace with `NaN`
 2. Remove observations with `NaN`
-3. Add in uncertainties for EPMA. For each LAICPMS analysis on a tephra chip we are using the tephra chip average and standard deviation major element composition. Where only one EPMA analysis exists per chip we use the relationship between concentration of an analyte and its external precision (reproducibility) to come up with a value for its uncertainty. See below and in `EPMA_stds_check.ipynb` for more details.
+3. Add in uncertainties for EPMA. For each LAICPMS analysis on a tephra chip we are using the tephra chip 
+average and standard deviation major element composition. Where only one EPMA analysis exists per chip we 
+use the relationship between concentration of an analyte and its external precision (reproducibility) to 
+come up with a value for its uncertainty. See below and in `EPMA_stds_check.ipynb` for more details.
 4. Convert wt% oxide concentrations to ppm elemental concentrations
 5. Remove negative concentrations (required for log-transforms)
 6. Transform the data using the centered logratio transform

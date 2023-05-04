@@ -3,10 +3,13 @@
 _Jordan Lubbers<br>
 U.S. Geological Survey Alaska Volcano Observatory_<br>
 
-This notebook looks at random forest proximities between observations for 
+This script looks at random forest proximities between observations for 
 both rfe feature and major element trained models. In this instance proximity 
 is defined as the number of times two samples within the training dataset reach 
 the same leaf within a decision tree, normalized by the number of trees in the forest. 
+
+This gives an indication about how similar two observations are to one another 
+in the eyes of the random forest model.
 
 """
 
@@ -32,8 +35,7 @@ from aleutian_colors import create_aleutian_colors
 from kinumaax.source.kinumaax import learning as kl
 
 
-def get_proximity_matrix(classifier,X_train):
-    
+def get_proximity_matrix(classifier, X_train):
     # Apply trees in the forest to X, return leaf indices.
     # a n_obs x n_trees matrix where each value is the index of the leaf
     # an observation ends up in
@@ -44,11 +46,9 @@ def get_proximity_matrix(classifier,X_train):
     # number of observations in training dataset
     n_obs = terminals.shape[0]
 
-
     prox_mat = 1 * np.equal.outer(n_obs, n_obs)
 
     for i in range(1, n_trees):
-
         # for each tree in the forest get the leaf indices
         # for each observation
         tree_obs = terminals[:, i]
@@ -62,12 +62,10 @@ def get_proximity_matrix(classifier,X_train):
         # same leaf index
         prox_mat += 1 * np.equal.outer(tree_obs, tree_obs)
 
-
     # normalize by total number of trees in the forest such that diags are 1.
     prox_mat = prox_mat / n_trees
-    
-    return prox_mat
 
+    return prox_mat
 
 
 custom_theme = Theme(
@@ -75,14 +73,19 @@ custom_theme = Theme(
 )
 console = Console(theme=custom_theme)
 
-export_path = Prompt.ask("[bold gold1] Enter the path to where figures should be exported[bold gold1]")
-export_path = export_path.replace('"',"")
+export_path = Prompt.ask(
+    "[bold gold1] Enter the path to where figures should be exported[bold gold1]"
+)
+export_path = export_path.replace('"', "")
 
-data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
-data_path = data_path.replace('"',"") 
+data_path = Prompt.ask(
+    "[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]"
+)
+data_path = data_path.replace('"', "")
 
-data = pd.read_excel(
-    f"{data_path}\\\B4_training_data_transformed_v2.xlsx").set_index("volcano")
+data = pd.read_excel(f"{data_path}\\\B4_training_data_transformed_v2.xlsx").set_index(
+    "volcano"
+)
 major_elements = data.loc[:, "Si_ppm":"P_ppm"].columns.tolist()
 trace_elements = data.loc[:, "Ca":"U"].columns.tolist()
 ratios = data.loc[:, "Sr/Y":"Rb/Cs"].columns.tolist()
@@ -129,7 +132,7 @@ sorted_abbreviations = [
     "AD",
     "GA",
     "SS",
-    "DV"
+    "DV",
 ]
 data = data.loc[sorted_locations, :].reset_index()
 
@@ -154,7 +157,7 @@ rs = 0
 proximity_matrices = []
 X_trains = []
 y_trains = []
-for features in [major_elements,rfe_features]:
+for features in [major_elements, rfe_features]:
     rs = 0
 
     X_train, X_test, y_train, y_test = train_test_split(
@@ -180,18 +183,17 @@ for features in [major_elements,rfe_features]:
     test_accuracies = scores["test_score"]
     console.print(f"feature space: {features}")
     console.print(
-        f"Mean test accuracy: {np.round(np.mean(test_accuracies),3)} ± {np.round(np.std(test_accuracies),3)}",style = "result"
+        f"Mean test accuracy: {np.round(np.mean(test_accuracies),3)} ± {np.round(np.std(test_accuracies),3)}",
+        style="result",
     )
-    #proximity matrix
+    # proximity matrix
     prox_mat = get_proximity_matrix(clf, X_train)
 
     # dissimilarity matrix
     dis_mat = 1.0 - prox_mat
 
-
-
     prox_mat_original = prox_mat.copy()
-    
+
     proximity_matrices.append(prox_mat)
     X_trains.append(X_train)
     y_trains.append(y_train)
@@ -199,28 +201,43 @@ for features in [major_elements,rfe_features]:
 ####################################################################################
 ######################## MANUSCRIPT FIGURE 4 ########################################
 #####################################################################################
-fig, ax = plt.subplots(2,1, figsize = (6,12),constrained_layout = True)
+fig, ax = plt.subplots(2, 1, figsize=(6, 12), constrained_layout=True)
 axes = ax.ravel()
 
-for matrix,a,model,labels in zip(proximity_matrices, axes, ['Major elements', 'RFE features'],y_trains):
-    m = a.matshow(matrix, cmap = "turbo", vmin = 0, vmax = 1)
-    a.set_title(model,fontsize = 18, loc = 'right', y = 0.93, c = 'w')
+for matrix, a, model, labels in zip(
+    proximity_matrices, axes, ["Major elements", "RFE features"], y_trains
+):
+    m = a.matshow(matrix, cmap="turbo", vmin=0, vmax=1)
+    a.set_title(model, fontsize=18, loc="right", y=0.93, c="w")
     a.xaxis.set_ticks_position("bottom")
     # a.set_xlabel("n$_{obs}$")
     a.set_ylabel("n$_{obs}$")
-    
+
     d = pd.DataFrame(labels)
-    d["count"] = np.arange(0,d.shape[0])
+    d["count"] = np.arange(0, d.shape[0])
     d = d.set_index("volcano")
-    
+
     for volcano in np.unique(y_train.values):
-        start = d.loc[volcano,"count"].min()
+        start = d.loc[volcano, "count"].min()
         x = d.loc[volcano, "count"].max()
         y = d.loc[volcano, "count"].median()
         # ax.text(x, y, volcano, c="k", fontsize=8)
-        a.add_patch(Rectangle(xy = (start,x), width = x - start,height = (start - x),color = 'none',ec = 'w',lw = .75),)
+        a.add_patch(
+            Rectangle(
+                xy=(start, x),
+                width=x - start,
+                height=(start - x),
+                color="none",
+                ec="w",
+                lw=0.75,
+            ),
+        )
 
-fig.supxlabel("n$_{obs}$",fontsize = 20, y = 0.05, x = .6)
-cbar = fig.colorbar(m, ax = ax, label = "proximity", shrink = .4, orientation = 'horizontal',anchor = (0.1,-5) )
-plt.savefig("{}\proximity_matrix_major_v_ratios.pdf".format(export_path),bbox_inches = 'tight')   
+fig.supxlabel("n$_{obs}$", fontsize=20, y=0.05, x=0.6)
+cbar = fig.colorbar(
+    m, ax=ax, label="proximity", shrink=0.4, orientation="horizontal", anchor=(0.1, -5)
+)
+plt.savefig(
+    "{}\proximity_matrix_major_v_ratios.pdf".format(export_path), bbox_inches="tight"
+)
 plt.show()

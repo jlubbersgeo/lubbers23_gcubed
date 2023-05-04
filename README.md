@@ -8,9 +8,14 @@ Contact: jlubbers@usgs.gov
 
 This repository is home to the jupyter notebooks and python scripts that recreate the figures of the above manuscript. Below is a brief explanation of each notebook.
 
+## How to use
+
+Every script in the manuscript is designed to be run using the supplementary spreadsheet associated with the manuscript.
+
 ## Explanation of code notebooks
 
 1. `build_training_data.py`: this takes the `major_trace_proximal_train_data` sheet in the supplementary data and builds the training dataset for subsequent use in machine learning applications. To do this, we will largely be using functions from the `kinumaax.crunching` module to clean the data and the `pyrolite` package to transform the data. It also cleans and transforms data in the `iodp_trace_data`, and `derkachev_data` sheets such that the eventual machine learning model can be applied to them.
+
 2. `bivariate_plots.py`: This notebook is devoted to creating Figure 2.
 
 3. `model_feature_selcetion.py`: This notebook explores the feature engineering process whereby a basic random forest model is trained using a variety of features such that the results from each feature space can be compared, ultimately producing Figures 3, A3, A4.
@@ -23,13 +28,13 @@ This repository is home to the jupyter notebooks and python scripts that recreat
 
 7. `logistic_regression_tuning.py`: Using a grid search to find the optimal parameters for the Logistic Regression classifier used in the final ensemble voting classifier. Produces Figure A5B.
 
-8. `RF_tuning.py`: Using a grid search to find the optimal parameters for the Random Forest classifier used in the final ensemble voting classifier. Produces Figure A7A.
+8. `random_forest_tuning.py`: Using a grid search to find the optimal parameters for the Random Forest classifier used in the final ensemble voting classifier. Produces Figure A7A.
 
 9. `SVM_tuning.py`: Using a grid search to find the optimal parameters for the Support Vector Machine classifier used in the final ensemble voting classifier. Produces Figure A6B.
 
 10. `final_voting_classifier.py`: Builds thet final ensemble voting classifier using the optimal hyperparameters for each individual algorithm. The influence of each individual aglorithm is determined by its F₁ score. Produces Figures 5 and A8.
 
-11. `rf_proximities.py`: Uses an out of the box random forest classifier and the optimal features found in `model_feature_selection.py` to compare class similarities as viewed by a random forest algorithm. Produces Figure 4.
+11. `random_forest_proximities.py`: Uses an out of the box random forest classifier and the optimal features found in `model_feature_selection.py` to compare class similarities as viewed by a random forest algorithm. Produces Figure 4.
 
 12. `variance_analysis.py`: completes the variance test as described the section "Assessing model variance" where we test how likely we would be able to correctly predict thte volcanic source for an eruption if the model was not trained on that eruption.
 
@@ -43,7 +48,7 @@ This repository is home to the jupyter notebooks and python scripts that recreat
 
 17. `EPMA_stds_check.py`: Quantifies the accuracy and precision of EPMA secondary standards analyzed in the study. Produces values in Table A2 and Figure A1.
 
-18. `lasercalc_standards_only.py`: Determines concentrations of LA-ICP-MS secondary standards analyzed in this study. Input data are secondary standards data normalized to ²⁹Si using LaserTRAM-DB. Produces values in Table A3 and Figure A2.
+18. `lasercalc_secondary_standards.py`: Determines concentrations of LA-ICP-MS secondary standards analyzed in this study. Input data are secondary standards data normalized to ²⁹Si using LaserTRAM-DB. Produces values in Table A3 and Figure A2.
 
 19. `aleutian_colors.py`: creates a dictionary of `volcano_name : {**kwargs}` pairs for each volcano in the dataset such that it can be consistently plotted in all figures.
 

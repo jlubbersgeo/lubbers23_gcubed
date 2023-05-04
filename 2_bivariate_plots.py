@@ -1,3 +1,9 @@
+""" This script creates Figure 2 in the manuscript 
+showing some bivariate plots in both concentration and 
+logratio transformed space
+
+
+"""
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -14,18 +20,20 @@ custom_theme = Theme(
 )
 console = Console(theme=custom_theme)
 
-export_path = Prompt.ask("[bold gold1] Enter the path to where spreadsheets should be exported[bold gold1]")
-export_path = export_path.replace('"',"")
+export_path = Prompt.ask(
+    "[bold gold1] Enter the path to where spreadsheets should be exported[bold gold1]"
+)
+export_path = export_path.replace('"', "")
 
-data_path = Prompt.ask("[bold gold1] Enter the path to where the cleaned and transformed data are stored[bold gold1]")
-data_path = export_path.replace('"',"") 
+data_path = Prompt.ask(
+    "[bold gold1] Enter the path to where the cleaned and transformed data are stored[bold gold1]"
+)
+data_path = export_path.replace('"', "")
 
-data = pd.read_excel(
-    f"{data_path}\\B4_training_data_cleaned.xlsx"
-).set_index('volcano')
+data = pd.read_excel(f"{data_path}\\B4_training_data_cleaned.xlsx").set_index("volcano")
 transformed_data = pd.read_excel(
     f"{data_path}\\B4_training_data_transformed_v2.xlsx"
-).set_index('volcano')
+).set_index("volcano")
 
 volcanoes = data.index.unique().tolist()
 
@@ -90,7 +98,7 @@ fig.legend(
     ncol=5,
     markerscale=1.5,
 )
-fig.suptitle("MANUSCRIPT FIGURE 2",fontsize = 20)
+fig.suptitle("MANUSCRIPT FIGURE 2", fontsize=20)
 plt.savefig(
     "{}\\LTPE_concentration_vs_transform_panel.pdf".format(export_path),
     bbox_inches="tight",

@@ -1,3 +1,11 @@
+""" 
+This creates plots and tables to show the composition of
+our measured EPMA secondary standards compared to their 
+published values
+
+
+
+"""
 from warnings import simplefilter
 
 import matplotlib.pyplot as plt
@@ -6,7 +14,7 @@ import pandas as pd
 import seaborn as sns
 import statsmodels.api as sm
 
-simplefilter(action='ignore', category=RuntimeWarning)
+simplefilter(action="ignore", category=RuntimeWarning)
 from rich.console import Console
 from rich.progress import track
 from rich.prompt import Prompt
@@ -21,22 +29,27 @@ custom_theme = Theme(
 )
 console = Console(theme=custom_theme)
 
-export_path = Prompt.ask("[bold gold1] Enter the path to where spreadsheets should be exported[bold gold1]")
-export_path = export_path.replace('"',"")
+export_path = Prompt.ask(
+    "[bold gold1] Enter the path to where spreadsheets should be exported[bold gold1]"
+)
+export_path = export_path.replace('"', "")
 
 
 inpath = Prompt.ask("[bold gold1]Enter the path the the supplementary data file")
-inpath = inpath.replace('"',"")
+inpath = inpath.replace('"', "")
 
-data = pd.read_excel(inpath, sheet_name="EPMA_secondary_standards").set_index("standard")
-stds_data = pd.read_excel(inpath, sheet_name="EPMA_accepted_standards").set_index("standard")
+data = pd.read_excel(inpath, sheet_name="EPMA_secondary_standards").set_index(
+    "standard"
+)
+stds_data = pd.read_excel(inpath, sheet_name="EPMA_accepted_standards").set_index(
+    "standard"
+)
 
 standards = data.index.unique().tolist()
 standards.remove("RLS-75")
 
 df = pd.DataFrame()
 for standard in standards:
-
     measured = data.loc[standard, "SiO2_norm":"K2O_norm"]
     if standard == "VG-2_cal":
         accepted = stds_data.loc["VG-2", "SiO2_norm":"K2O_norm"]
@@ -48,8 +61,6 @@ for standard in standards:
     df = pd.concat([df, ratios])
 
 df.reset_index(inplace=True)
-
-
 
 
 ###########################################################################
@@ -129,30 +140,31 @@ mean_df.index = standards
 mean_df.columns = elements
 mean_df = mean_df.T
 mean_df.replace([np.inf, -np.inf], np.nan, inplace=True)
-mean_df.fillna('no value',inplace = True)
+mean_df.fillna("no value", inplace=True)
 
 stds_df = pd.DataFrame(np.round(np.array(stds), 1))
 stds_df.index = standards
 stds_df.columns = elements
 stds_df = stds_df.T
 stds_df.replace([np.inf, -np.inf], np.nan, inplace=True)
-stds_df.fillna('',inplace = True)
+stds_df.fillna("", inplace=True)
 
 
 vals = []
 for j in range(mean_df.shape[0]):
-    
     for i in range(mean_df.shape[1]):
-        vals.append("{} ± {}".format(str(mean_df.iloc[j,i]),str(stds_df.iloc[j,i])))
+        vals.append("{} ± {}".format(str(mean_df.iloc[j, i]), str(stds_df.iloc[j, i])))
 
 
 vals_df = pd.DataFrame(np.array(vals).reshape(mean_df.shape))
-vals_df.index =elements
+vals_df.index = elements
 vals_df.columns = standards
 vals_df = vals_df
-vals_df.index.name = 'Analyte'
+vals_df.index.name = "Analyte"
 
-vals_df.to_excel('{}\B4_proximal_epmasecondarystandards_accuracy.xlsx'.format(export_path))
+vals_df.to_excel(
+    "{}\B4_proximal_epmasecondarystandards_accuracy.xlsx".format(export_path)
+)
 
 #######################################################################
 #################### FIGURE AND OUTPUT SHOWING ########################
@@ -201,16 +213,27 @@ df = results.get_prediction(xx).summary_frame(alpha=0.5)
 
 print(results.summary())
 
-fig, ax = plt.subplots(2,1, figsize = (4,8),layout = 'constrained')
+fig, ax = plt.subplots(2, 1, figsize=(4, 8), layout="constrained")
 
-ax[0].plot(xx[:, 1], df["mean"], c="k", ls="--", label = 'best fit')
+ax[0].plot(xx[:, 1], df["mean"], c="k", ls="--", label="best fit")
 ax[0].fill_between(
     xx[:, 1], df["mean_ci_lower"], df["mean_ci_upper"], fc="gray", alpha=0.5
 )
-ax[0].fill_between(xx[:, 1], df["obs_ci_lower"], df["obs_ci_upper"], fc="gray", alpha=0.3)
-sns.scatterplot(data=melted, x="log_mean", y="log_rel_std", hue="element", ec="k", ax = ax[0])
+ax[0].fill_between(
+    xx[:, 1], df["obs_ci_lower"], df["obs_ci_upper"], fc="gray", alpha=0.3
+)
+sns.scatterplot(
+    data=melted, x="log_mean", y="log_rel_std", hue="element", ec="k", ax=ax[0]
+)
 h, l = ax[0].get_legend_handles_labels()
-ax[0].legend(h,[label.replace("_norm","") for label in l ],loc = 'upper right', ncol = 2, bbox_to_anchor = (1,1),fontsize = 8)
+ax[0].legend(
+    h,
+    [label.replace("_norm", "") for label in l],
+    loc="upper right",
+    ncol=2,
+    bbox_to_anchor=(1, 1),
+    fontsize=8,
+)
 
 ax[0].set_xlabel("log[concentration]")
 ax[0].set_ylabel("log[% 1$\sigma$]")
@@ -222,20 +245,20 @@ ax[0].text(
     transform=ax[0].transAxes,
 )
 
-x_var = np.linspace(.01,85,100)
-y_var = np.exp(-0.64*np.log(x_var) + 1.57)
-sns.scatterplot(data=melted, x="mean", y="rel_std", hue="element", ec="k",ax = ax[1], legend = False)
-ax[1].plot(x_var,y_var,'k--')
+x_var = np.linspace(0.01, 85, 100)
+y_var = np.exp(-0.64 * np.log(x_var) + 1.57)
+sns.scatterplot(
+    data=melted, x="mean", y="rel_std", hue="element", ec="k", ax=ax[1], legend=False
+)
+ax[1].plot(x_var, y_var, "k--")
 
 ax[1].set_xlabel("concentration [wt%]")
 ax[1].set_ylabel("% 1$\sigma$")
-ax[1].set_yscale('log')
+ax[1].set_yscale("log")
 
 
 plt.savefig(r"{}\Menlo_stds_externalerrors.pdf".format(export_path))
-plt.show(block = False)
-
-
+plt.show(block=False)
 
 
 console = Console()
@@ -243,7 +266,6 @@ console = Console()
 output_table = vals_df.reset_index()
 display_table = Table(title="EPMA secondary standard measured values")
 for column in output_table.columns.tolist():
-
     display_table.add_column(column)
 
 rows = output_table.values.tolist()
@@ -252,4 +274,4 @@ for row in rows:
     display_table.add_row(*row)
 
 console.print(display_table)
-plt.show(block = True)
+plt.show(block=True)
