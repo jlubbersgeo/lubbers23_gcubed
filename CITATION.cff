@@ -1,11 +1,11 @@
 cff-version: 1.1.0
 message: "If you use this code please cite it as below"
 authors:
-  - family-names: "Lubbers"
-  given-names: "Jordan"
-  orcid: "https://orcid.org/0000-0002-3566-5091"
+- family-names: "Lubbers"
+given-names: "Jordan"
+orcid: "https://orcid.org/0000-0002-3566-5091"
   
-title: jlubbersgeo/lubbers23_gcubed: Manuscript submission
+title: "Manuscript submission"
 version: v0.0.1-beta
 date-released: 2023-05-05
 doi: 10.5281/zenodo.7901401
