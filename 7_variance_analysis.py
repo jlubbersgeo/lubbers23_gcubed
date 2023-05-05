@@ -133,18 +133,19 @@ custom_theme = Theme(
 )
 console = Console(theme=custom_theme)
 
-export_path = Prompt.ask("[bold gold1] Enter the path to where overall results should be exported[bold gold1]")
-export_path = export_path.replace('"',"")
-
-data_path = Prompt.ask("[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]")
-data_path = data_path.replace('"',"") 
-
-data = pd.read_excel(
-    f"{data_path}\\\B4_training_data_transformed_v2.xlsx")
-
-model_weights = pd.read_excel(
-    f"{data_path}\\\deployment_votingclassifier_weights.xlsx"
+export_path = Prompt.ask(
+    "[bold gold1] Enter the path to where overall results should be exported[bold gold1]"
 )
+export_path = export_path.replace('"', "")
+
+data_path = Prompt.ask(
+    "[bold gold1] Enter the folder path to where transformed data are stored[bold gold1]"
+)
+data_path = data_path.replace('"', "")
+
+data = pd.read_excel(f"{data_path}\\\B4_training_data_transformed_v2.xlsx")
+
+model_weights = pd.read_excel(f"{data_path}\\\deployment_votingclassifier_weights.xlsx")
 major_elements = data.loc[:, "Si_ppm":"P_ppm"].columns.tolist()
 trace_elements = data.loc[:, "Ca":"U"].columns.tolist()
 ratios = data.loc[:, "Sr/Y":"Rb/Cs"].columns.tolist()
@@ -170,7 +171,10 @@ rs = 0
 
 estimators = [
     ("lda", LinearDiscriminantAnalysis(shrinkage=0.3, solver="lsqr")),
-    ("logreg", LogisticRegression(C=10, penalty="l2", solver="newton-cg",max_iter = 250)),
+    (
+        "logreg",
+        LogisticRegression(C=10, penalty="l2", solver="newton-cg", max_iter=250),
+    ),
     ("knc", KNeighborsClassifier(algorithm="auto", n_neighbors=5)),
     ("svc", SVC(random_state=rs, C=10, gamma=1, probability=True)),
     (
@@ -209,22 +213,29 @@ else:
     output_dir = export_path
 output_dir = output_dir.replace('"', "")
 
-console.print(f"\nOVERALL VARIANCE RESULT SPREADSHEET DIRECTORY:\n{export_path}\n", style="path")
+console.print(
+    f"\nOVERALL VARIANCE RESULT SPREADSHEET DIRECTORY:\n{export_path}\n", style="path"
+)
 
-console.print(f"\nINDIVIDUAL VARIANCE RESULT SPREADSHEET AND FIGURE DIRECTORY:\n{output_dir}\n", style="path")
+console.print(
+    f"\nINDIVIDUAL VARIANCE RESULT SPREADSHEET AND FIGURE DIRECTORY:\n{output_dir}\n",
+    style="path",
+)
 
-console.print("STARTING VARIANCE ANALYSIS...THIS IS GOING TO TAKE A WHILE",style = "main")
+console.print(
+    "STARTING VARIANCE ANALYSIS...THIS IS GOING TO TAKE A WHILE", style="main"
+)
 
 
 for option in ["major", "rfe"]:
     if option == "major":
         myfeatures = major_elements
-        console.print("Working on major element variance analysis",style = "main")
+        console.print("Working on major element variance analysis", style="main")
 
     elif option == "rfe":
         myfeatures = rfe_features
-        console.print("Working on rfe element variance analysis",style = "main")
-    console.print(f"Your features are {myfeatures}",style = "result")
+        console.print("Working on rfe element variance analysis", style="main")
+    console.print(f"Your features are {myfeatures}", style="result")
 
     for e in tqdm(range(len(eruptions))):
         # progress.console.print(f"working on eruption: {e}")
@@ -267,7 +278,7 @@ for option in ["major", "rfe"]:
             f"{output_dir}\{eruptions[e]}_prediction_probabilities_vcs_{option}_tuned.xlsx",
             index=True,
         )
-            
+
 
 infiles = glob.glob("{}/*.xlsx".format(output_dir))
 
@@ -275,17 +286,24 @@ rfe_files = [file for file in infiles if "rfe" in file]
 
 major_files = [file for file in infiles if "major" in file]
 
-for option in track(["major", "rfe"],description = "each feature space option"):
+for option in tqdm(["major", "rfe"], unit="feature option"):
     if option == "major":
         files = major_files
         color = "C1"
+        console.print(
+            "COMBINING MAJOR ELEMENT VARIANCE RESULTS AND MAKING FIGURES\n",
+            style="main",
+        )
     elif option == "rfe":
         files = rfe_files
         color = "C0"
+        console.print(
+            "COMBINING RFE FEATURE VARIANCE RESULTS AND MAKING FIGURES\n", style="main"
+        )
 
     df_list = []
 
-    for file in tqdm(files):
+    for file in files:
         df = pd.read_excel(file)
         df_list.append(df)
 
@@ -294,7 +312,7 @@ for option in track(["major", "rfe"],description = "each feature space option"):
     combined_df.set_index("eruption", inplace=True)
     combined_df.to_excel(f"{export_path}\\vcs_{option}_variance_results.xlsx")
 
-    for eruption in eruptions:
+    for eruption in tqdm(eruptions, unit="figures"):
         fig, ax = plt.subplots()
         combined_df.loc[eruption, :].boxplot(
             column=sorted(volcanoes),
@@ -317,11 +335,7 @@ for option in track(["major", "rfe"],description = "each feature space option"):
             loc="left",
         )
         plt.savefig(
-            f"{export_path}\{eruption}_{option}_predictions_boxplot.pdf",
+            f"{output_dir}\{eruption}_{option}_predictions_boxplot.pdf",
             bbox_inches="tight",
         )
         plt.close()
-
-
-        
-
