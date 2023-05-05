@@ -14,7 +14,7 @@ While all of these questions are extremely important to help better understand a
 
 **_Why kinumaax̂?_**
 
-- "kinumaax̂" is the [Unungax̂](https://www.uaf.edu/anlc/languages/aleut.php) word for "volcano ashes". Much of this project was developed working on volcanoes that are located within traditional Unungax̂ lands across the Aleutian Islands and is our way of acknowledging that we are but guests in our scientific pursuits.
+- "kinumaax̂" is the [Unungax̂](https://www.uaf.edu/anlc/languages-move/aleut.php) word for "volcano ashes". Much of this project was developed working on volcanoes that are located within traditional Unungax̂ lands across the Aleutian Islands and is our way of acknowledging that we are but guests in our scientific pursuits.
 
 ## Modules
 
