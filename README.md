@@ -6,7 +6,12 @@ Jordan Lubbers¹, Matthew Loewen¹, Kristi Wallace¹, Michelle Coombs¹, Jason A
 
 Contact: jlubbers@usgs.gov
 
-This repository is home to the jupyter notebooks and python scripts that recreate the figures of the above manuscript. Below is a brief explanation of each notebook.
+
+[![DOI](https://zenodo.org/badge/635875931.svg)](https://zenodo.org/badge/latestdoi/635875931)
+
+
+
+This repository is home to the python scripts that recreate the data and figures of the above manuscript. Below is a brief explanation of each notebook.
 
 ## How to use
 
