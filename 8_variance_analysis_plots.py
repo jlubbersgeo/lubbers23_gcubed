@@ -7,6 +7,9 @@ import sys
 
 import cartopy.crs as ccrs  # for the subplot mosaic of maps
 import matplotlib.pyplot as plt
+
+# custom plotting defaults
+import mpl_defaults
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -16,9 +19,6 @@ from matplotlib.patches import Patch
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.theme import Theme
-
-# custom plotting defaults
-import mpl_defaults
 
 custom_theme = Theme(
     {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
@@ -232,7 +232,7 @@ ax.plot(
 ax.plot(
     df["x_maj"],
     df["major_median"],
-    marker="o",
+    marker="^",
     ls="",
     label="Major elements",
     ms=5,
@@ -344,10 +344,10 @@ for source, tax in zip(
     )
     if source == 'Aniakchak':
 
-        tax.scatter(major_points_to_plot, c="none", ec="C1", marker="o", s=15, label = 'Major Elements')
+        tax.scatter(major_points_to_plot, c="none", ec="C1", marker="^", s=15, label = 'Major Elements')
         tax.scatter(trace_points_to_plot, c="none", ec="C0", marker="o", s=15, label = 'RFE Features')
     else:
-        tax.scatter(major_points_to_plot, c="none", ec="C1", marker="o", s=15, )
+        tax.scatter(major_points_to_plot, c="none", ec="C1", marker="^", s=15, )
         tax.scatter(trace_points_to_plot, c="none", ec="C0", marker="o", s=15, )
 
     tax.right_corner_label(subset_cols[0], offset=0.25, rotation=-60)

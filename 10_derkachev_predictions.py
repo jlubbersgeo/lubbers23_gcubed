@@ -17,6 +17,9 @@ import pickle
 import sys
 
 import matplotlib.pyplot as plt
+
+# custom plotting defaults
+import mpl_defaults
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -28,9 +31,6 @@ from rich.prompt import Prompt
 from rich.theme import Theme
 from scipy.stats import ks_2samp, ttest_ind
 from tqdm import tqdm
-
-# custom plotting defaults
-import mpl_defaults
 
 custom_theme = Theme(
     {"main": "bold gold1", "path": "bold steel_blue1", "result": "magenta"}
@@ -215,7 +215,7 @@ for a, sample in zip(axes, samples):
     a.minorticks_off()
 
 legend_elements = [
-    Patch(facecolor="C1", edgecolor="k", label="Monte Carlo"),
+    Patch(facecolor="C1", edgecolor="k", label="Synthetic"),
     Patch(facecolor="C0", edgecolor="k", label="Individual"),
 ]
 fig.legend(
